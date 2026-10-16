@@ -1,18 +1,23 @@
 # gfx906 upstream delta
 
-This note records the public upstream relationship for the gfx906 work. It does not claim that the public source tree reproduces the published container.
+This note maps gfx906-relevant features to public upstream commits observed on 2026-10-16. It describes source history only; it does not identify the source commit used to build the archived container.
 
-## Public source and change status
+## Feature-to-commit map
 
-- The public Strata source is [Niko1221/Strata](https://github.com/Niko1221/Strata). The evidence worktree's upstream base is `296b59d2f73c8f04a805df29c2fa97655adace78`.
-- [PR #1102](https://github.com/Niko1221/Strata/pull/1102) is closed. Its effective equivalent is already present upstream, so it is not a unique delta for this image.
-- [PR #1242](https://github.com/Niko1221/Strata/pull/1242) and [PR #1253](https://github.com/Niko1221/Strata/pull/1253) are open. Their original changes were locally ported for the experimental build.
-- The AB/CD speculative path is custom local source and is unpublished. Its exact-token and state parity remain open questions. It is opt-in.
-- The Oct 15 container was built from v0.1.41 experimental source. That build is not currently reproducible from the stated upstream HEAD. The published image digest is recorded in [PROVENANCE.md](PROVENANCE.md).
+| Feature | Upstream commit (date) | Scope and relationship |
+| --- | --- | --- |
+| AMD gfx906 build support | [`9ff290b493a2`](https://github.com/Niko1221/Strata/commit/9ff290b493a2aaf6a784af69190c82f903ebf221) (2026-10-03) | Opt-in HIP support for gfx906 devices. This establishes public source support, not validation of a particular image or workload. |
+| K8/V4 KV cache | [`3597c47ff8cd`](https://github.com/Niko1221/Strata/commit/3597c47ff8cd490dccfdafa2bd9d9b80ba9aa255) (2026-09-29) | Adds the hybrid K8/V4 cache and `--kv k8v4`. |
+| Refreshed-residency batch servicing (#1102 equivalent) | [`7ef55e19599f`](https://github.com/Niko1221/Strata/commit/7ef55e19599f1ef009894b3260b40cdbe0d59ba9) (2026-10-07) | Upstream #1118 changes the batch graph/service decision to use per-window `ar_on()` residency. Its commit message identifies #1102 as the same fix for `run_slot_rows()` and `batch_poll()`; #1118 also updates `service()`. This is an upstream equivalent behavior, not evidence that the archived binary contains either commit. |
+| Serial batch-MTP windows | [`a0116b2782a5`](https://github.com/Niko1221/Strata/commit/a0116b2782a5b82622358c04a06496485d12b2d6) (2026-10-12) | Adds/retains serial MTP windows with `STRATA_BATCH_MTP_SERIAL=1` or `--batch-groups 1`; the commit states that the default layer-split pipeline takes precedence over `--batch-mtp`. This is the current upstream behavior, not a source attribution for the archived image. |
 
-## Limits
+## Relationship to #1242 and #1253
 
-These facts describe source and review status only. They do not prove that any commit or current source tree produced the published image. In particular, do not present the public source fork as a reproduction of that image. A source-to-image claim needs a build record and matching artifact evidence.
+As observed on 2026-10-16, upstream PR [#1242](https://github.com/Niko1221/Strata/pull/1242) is open and concerns concurrent image-position isolation and batch-MTP draft paths; PR [#1253](https://github.com/Niko1221/Strata/pull/1253) is open and concerns serial multi-GPU batch MTP. The public upstream commit above documents serial windows and their current mode-selection policy, but does not establish that either open PR was merged unchanged or that it reproduces the archived experimental build. Treat the PRs and the current upstream commit as related source history, not interchangeable build provenance.
+
+## Archived build boundary
+
+The archived binary's exact coherent source commit is unknown. Public tag metadata, executable hashes, and current upstream feature presence do not establish which commits or patches produced it. The archived AB/CD path remains opt-in; its source is unpublished and its exact-token and recurrent-state parity remain open. Do not infer that current upstream contains that path or that the archived binary can be reproduced from this source tree.
 
 ## License
 

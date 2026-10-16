@@ -6,6 +6,16 @@ Keep raw client token events and native logs alongside the record when publishin
 `source_ref` values that resolve in the shared evidence bundle. Never put prompt text, credentials, private host
 paths or raw private logs in a public report.
 
+For reproducible builds, an evidence bundle may also include a receipt validated against
+[`build-receipt-v1.schema.json`](build-receipt-v1.schema.json). Link it to the benchmark by setting the receipt's
+`receipt_id` equal to `provenance.build_id`; keep the receipt alongside the record in the bundle. This uses the
+existing required build identifier and does not change benchmark schema-v1 records or validator behavior. The receipt
+records source revision and dirty patch identity, gfx906 target, toolchain versions, build configuration/options and
+command, exit status, and artifact SHA-256. When `source.dirty` is true, include both a patch bundle reference and its
+SHA-256. Keep commands and referenced logs free of secrets and machine-specific private paths. A receipt is a
+structured build record; it does not by itself prove that a benchmark used that artifact or that the artifact behaves
+correctly.
+
 Run `python tools/gfx906.py bench-validate RECORD.json` and
 `python tools/gfx906.py report RECORD.json` from the repository root. These commands check internal consistency;
 they do **not** open or authenticate referenced raw logs and do not prove the report came from a GPU. Independent
