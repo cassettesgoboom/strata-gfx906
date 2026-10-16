@@ -4,12 +4,15 @@ This is a sanitized historical benchmark summary. It preserves the workload labe
 
 | Workload | Configuration | Strict SSE estimate (tokens/s) | Whole-wave estimate (tokens/s) | Interpretation |
 | --- | --- | ---: | ---: | --- |
-| P4 | 4 lanes, about 102K context, AB/CD on | 71.17 | 53.94 | Historical multi-lane run. AB/CD exact-token and state parity remain open. |
-| P3 | 3 lanes, about 152K context, serial, 512 tokens/lane | 47.37 | 35.93 | Historical serial run. |
+| P2 serial | 2 lanes, about 96K context | 38.43 | 33.35 | Archived cached multi-agent run. |
+| P2 serial | 2 lanes, about 152K context, 512 tokens/lane | 45.19 | 36.19 | Archived cached multi-agent run. |
+| P3 serial | 3 lanes, about 99K context | 52.46 | 41.67 | Archived cached multi-agent run. |
+| P3 serial | 3 lanes, about 152K context, 512 tokens/lane | 47.37 | 35.93 | Archived cached multi-agent run. |
+| P4 AB/CD opt-in | 4 lanes, about 33K context | 67.10 | 55.73 | Archived cached multi-agent run; exact-token and state parity remain open. |
+| P4 AB/CD opt-in | 4 lanes, 102K context | 71.17 | 53.94 | Archived cached multi-agent run; emitted 512/512/512/473 tokens and the fourth lane stopped naturally. Exact-token and state parity remain open. |
 | P2 capacity run | 2 lanes, about 192K context, cached continuations only, 65 tokens/lane | — | — | Capacity-only observation; not a sustained throughput result. |
-| P2 sustained run | 2 lanes, about 152K context, 512 tokens/lane | 45.19 | 36.19 | Historical sustained run. |
 
-The P4, P3, and P2 runs use different lane counts, context sizes, cache conditions, and token counts. Their rates do not establish a direct causal speedup between configurations. The P2 192K entry is capacity evidence only and must not be represented as a throughput benchmark. AB/CD remains opt-in pending exact-token and state parity evidence.
+These are the archived MI50 figures documented in [PR #11](https://github.com/cassettesgoboom/strata-gfx906/pull/11) and the repository README, not fresh measurements. Strict overlap is estimated from client SSE timing over the common-overlap interval. The P2/P3/P4 rows use different runs and schedulers; their rates do not establish a direct causal speedup. The P2 192K entry is capacity evidence only and must not be represented as a throughput benchmark. AB/CD remains opt-in pending exact-token and state parity evidence.
 
 ## Measurement caveat
 
@@ -20,3 +23,7 @@ These values are sanitized historical estimates, not independently reproduced he
 The [2026-10-16 machine-readable receipt](../../benchmarks/gfx906/receipts/2026-10-16-current-main-gpu-smoke.json) records a new, separate source-equivalent gfx906 binary (`73a0f98105938850c749a3f0ed1dfe08e1753a97379aa9741c7fb73351c0137c`) running on two MI50 cards. The first 4K-context request generated 146 tokens. Its continuation, constructed with the actual first answer, generated 130 tokens and reused 70 prompt tokens according to native request metrics. Both returned HTTP 200 with `stop` finish reasons; MTP accepted 173 of 208 offered proposals across the two requests. Candidate swap and OOM counters remained zero, and the isolated candidate shut down cleanly.
 
 The new binary and current-source server were mounted into the archived runtime image for this smoke. The published image still contains the archived binary. These short serial requests do not measure sustained multi-agent throughput, validate AB/CD, or prove exact native-token or recurrent-state parity. They must not be pooled with the historical benchmark table above.
+
+## CPU-only AB/CD trace comparator
+
+[PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds a CPU-only comparator for supplied serial-OFF and AB/CD-ON native commit traces, with synthetic fixtures and fail-closed tests. The contract checks matched provenance and inputs, cache history, contiguous commit boundaries, token IDs, MTP decisions, and persistent-state hashes, then reports the first divergence. Its output always sets `runtime_parity_claim` to `false`: matching JSON proves only that the supplied traces compare equal. It does not authenticate trace capture, establish runtime parity, run a model, validate GPU behavior, or port AB/CD to current main. See [the contract](../../benchmarks/gfx906/fixtures/abcd-parity-contract-v1.json).
