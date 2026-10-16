@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "receipt_id": "2026-10-16-current-main-equivalent-build",
+  "source": {
+    "repository": "https://github.com/cassettesgoboom/strata-gfx906",
+    "commit": "02f500b8056f9cc7af27dfa577476e69eaab75a6",
+    "dirty": true,
+    "patch_bundle_ref": "benchmarks/gfx906/receipts/2026-10-16-current-main-equivalent.patch",
+    "patch_bundle_sha256": "cf7c2d282ac1a12203ce916ee2878a5961f4e909b80549a73cec9ad1ee111038"
+  },
+  "target": {
+    "architecture": "gfx906"
+  },
+  "toolchain": {
+    "compiler": "AMD clang",
+    "compiler_version": "23.0.0git",
+    "rocm_version": "7.14.60850-0000000",
+    "components": [
+      {
+        "name": "local build environment image ID",
+        "version": "sha256:06c8bd0e6ede3614ad3467a056cce06e111ca854e3c7251cc0a140e89c9c32fb"
+      },
+      {
+        "name": "GGML/llama.cpp",
+        "version": "3cf03257f219afbe7334045ff7c6a06ac68c627d"
+      }
+    ]
+  },
+  "build": {
+    "system": "Linux isolated networkless container, 6 GiB memory limit",
+    "generator": "Ninja",
+    "configuration": "Release",
+    "options": {
+      "STRATA_ENABLE_CUDA": "ON",
+      "STRATA_HIP_GFX906": "ON",
+      "CMAKE_HIP_ARCHITECTURES": "gfx906",
+      "STRATA_GGML_DIR": "/src/llama.cpp",
+      "CMAKE_C_COMPILER": "/opt/rocm/llvm/bin/clang",
+      "CMAKE_CXX_COMPILER": "/opt/rocm/llvm/bin/clang++"
+    },
+    "command": "cmake -S /src/strata -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSTRATA_ENABLE_CUDA=ON -DSTRATA_HIP_GFX906=ON -DCMAKE_HIP_ARCHITECTURES=gfx906 -DSTRATA_GGML_DIR=/src/llama.cpp -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ && ninja -C /build -j2 strata",
+    "exit_code": 0
+  },
+  "artifact": {
+    "name": "new local binary",
+    "sha256": "73a0f98105938850c749a3f0ed1dfe08e1753a97379aa9741c7fb73351c0137c",
+    "size_bytes": 26102576
+  }
+}
