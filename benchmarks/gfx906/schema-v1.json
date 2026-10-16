@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cassettesgoboom/strata-gfx906/blob/main/benchmarks/gfx906/schema-v1.json",
+  "title": "Strata gfx906 benchmark evidence, version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "provenance", "hardware", "workload", "outcome", "measurements"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["repository", "commit", "engine_version", "source", "build_id", "command"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "commit": {"type": "string", "pattern": "^[0-9a-fA-F]{7,64}$"},
+        "engine_version": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "build_id": {"type": "string", "minLength": 1},
+        "command": {"type": "string", "minLength": 1},
+        "synthetic": {"type": "boolean"}
+      }
+    },
+    "hardware": {
+      "type": "object", "additionalProperties": false,
+      "required": ["gpu_model", "architecture", "rocm_version", "vram_gib", "ram_gib"],
+      "properties": {
+        "gpu_model": {"type": "string", "minLength": 1},
+        "architecture": {"const": "gfx906"},
+        "rocm_version": {"type": "string", "minLength": 1},
+        "vram_gib": {"type": "number", "exclusiveMinimum": 0},
+        "ram_gib": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "workload": {
+      "type": "object", "additionalProperties": false,
+      "required": ["model", "quant", "mode", "context_tokens", "prompt_tokens", "output_tokens", "batch"],
+      "properties": {
+        "model": {"type": "string", "minLength": 1},
+        "quant": {"type": "string", "minLength": 1},
+        "mode": {"type": "string", "minLength": 1},
+        "context_tokens": {"type": "integer", "minimum": 1},
+        "prompt_tokens": {"type": "integer", "minimum": 1},
+        "output_tokens": {"type": "integer", "minimum": 1},
+        "batch": {"type": "integer", "minimum": 1}
+      }
+    },
+    "outcome": {
+      "type": "object", "additionalProperties": false,
+      "required": ["category", "status", "output_complete", "cache_state", "actual_output_tokens", "finish_reason", "category_statuses"],
+      "properties": {
+        "category": {"enum": ["capacity", "performance", "correctness"]},
+        "status": {"enum": ["PASS", "FAIL", "NOT_RUN"]},
+        "output_complete": {"type": "boolean"},
+        "cache_state": {"enum": ["cold", "warm", "cached", "unknown"]},
+        "actual_output_tokens": {"type": "integer", "minimum": 0},
+        "finish_reason": {"enum": ["eos", "length", "stop", "cancel", "error"]},
+        "sustained_tokens_min": {"type": "integer", "minimum": 1},
+        "native_output_tokens": {"type": "integer", "minimum": 0},
+        "native_output_source_ref": {"type": "string", "minLength": 1},
+        "category_statuses": {
+          "type": "object", "additionalProperties": false,
+          "required": ["capacity", "performance", "correctness"],
+          "properties": {
+            "capacity": {"enum": ["PASS", "FAIL", "NOT_RUN"]},
+            "performance": {"enum": ["PASS", "FAIL", "NOT_RUN"]},
+            "correctness": {"enum": ["PASS", "FAIL", "NOT_RUN"]}
+          }
+        },
+        "notes": {"type": "string"}
+      }
+    },
+    "cache_evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["prompt_identity_sha256", "reused_tokens", "fresh_tokens", "source_ref"],
+      "properties": {
+        "prompt_identity_sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+        "reused_tokens": {"type": "integer", "minimum": 0},
+        "fresh_tokens": {"type": "integer", "minimum": 0},
+        "source_ref": {"type": "string", "minLength": 1}
+      }
+    },
+    "measurements": {
+      "type": "object", "minProperties": 1,
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "required": ["value", "unit"],
+        "properties": {
+          "value": {"type": "number"},
+          "unit": {"enum": ["tokens/s", "ms", "s", "tokens", "GiB", "MiB", "C", "%", "count", "bool"]}
+        }
+      }
+    },
+    "concurrency": {
+      "type": "object", "additionalProperties": false,
+      "required": ["strict_overlap_claim", "token_output_envelopes_ms"],
+      "properties": {
+        "strict_overlap_claim": {"type": "boolean"},
+        "token_output_envelopes_ms": {
+          "type": "array", "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["request_id", "start_ms", "end_ms", "emitted_tokens", "native_emitted_tokens"],
+            "properties": {
+              "request_id": {"type": "string", "minLength": 1},
+              "start_ms": {"type": "number"},
+              "end_ms": {"type": "number"},
+              "emitted_tokens": {"type": "integer", "minimum": 1},
+              "native_emitted_tokens": {"type": "integer", "minimum": 1}
+            }
+          }
+        },
+        "native_occupancy": {
+          "type": "object", "additionalProperties": false,
+          "required": ["evidence_kind", "source_ref", "offered_slots", "active_slots_peak"],
+          "properties": {
+            "evidence_kind": {"enum": ["native_window_counter", "native_slot_intervals"]},
+            "source_ref": {"type": "string", "minLength": 1},
+            "offered_slots": {"type": "integer", "minimum": 1},
+            "active_slots_peak": {"type": "integer", "minimum": 1},
+            "window_start_ms": {"type": "number"},
+            "window_end_ms": {"type": "number"},
+            "samples_ms": {
+              "type": "array", "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["time_ms", "active_slots"],
+                "properties": {"time_ms": {"type": "number"}, "active_slots": {"type": "integer", "minimum": 0}}
+              }
+            },
+            "slot_intervals_ms": {
+              "type": "array", "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["start_ms", "end_ms"],
+                "properties": {"start_ms": {"type": "number"}, "end_ms": {"type": "number"}}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"outcome": {"properties": {"status": {"const": "PASS"}}}}, "required": ["outcome"]},
+      "then": {"properties": {"outcome": {"properties": {"output_complete": {"const": true}, "actual_output_tokens": {"minimum": 1}}}}}
+    },
+    {
+      "if": {"properties": {"outcome": {"properties": {"cache_state": {"enum": ["cold", "warm", "cached"]}}}}, "required": ["outcome"]},
+      "then": {"required": ["cache_evidence"]}
+    },
+    {
+      "if": {"properties": {"concurrency": {"properties": {"strict_overlap_claim": {"const": true}}}}, "required": ["concurrency"]},
+      "then": {
+        "properties": {"concurrency": {"required": ["native_occupancy"], "properties": {"token_output_envelopes_ms": {"minItems": 2}}}}
+      }
+    },
+    {
+      "if": {"properties": {"concurrency": {"properties": {"native_occupancy": {"properties": {"evidence_kind": {"const": "native_slot_intervals"}}}}}}, "required": ["concurrency"]},
+      "then": {"properties": {"concurrency": {"properties": {"native_occupancy": {"required": ["slot_intervals_ms"]}}}}}
+    },
+    {
+      "if": {"properties": {"concurrency": {"properties": {"native_occupancy": {"properties": {"evidence_kind": {"const": "native_window_counter"}}}}}}, "required": ["concurrency"]},
+      "then": {"properties": {"concurrency": {"properties": {"native_occupancy": {"required": ["window_start_ms", "window_end_ms", "samples_ms"], "properties": {"samples_ms": {"minItems": 1}}}}}}}
+    },
+    {
+      "if": {"properties": {"outcome": {"required": ["sustained_tokens_min"]}}, "required": ["outcome"]},
+      "then": {"properties": {"outcome": {"required": ["native_output_tokens", "native_output_source_ref"]}}}
+    }
+  ],
+  "oneOf": [
+    {"properties": {"outcome": {"properties": {"category": {"const": "capacity"}, "status": {"const": "PASS"}, "category_statuses": {"properties": {"capacity": {"const": "PASS"}}}}}}},
+    {"properties": {"outcome": {"properties": {"category": {"const": "capacity"}, "status": {"const": "FAIL"}, "category_statuses": {"properties": {"capacity": {"const": "FAIL"}}}}}}},
+    {"properties": {"outcome": {"properties": {"category": {"const": "capacity"}, "status": {"const": "NOT_RUN"}, "category_statuses": {"properties": {"capacity": {"const": "NOT_RUN"}}}}}}},
+    {"properties": {"outcome": {"properties": {"category": {"const": "performance"}, "status": {"const": "PASS"}, "category_statuses": {"properties": {"performance": {"const": "PASS"}}}}}}},
+    {"properties": {"outcome": {"properties": {"category": {"const": "performance"}, "status": {"const": "FAIL"}, "category_statuses": {"properties": {"performance": {"const": "FAIL"}}}}}}},
+    {"properties": {"outcome": {"properties": {"category": {"const": "performance"}, "status": {"const": "NOT_RUN"}, "category_statuses": {"properties": {"performance": {"const": "NOT_RUN"}}}}}}},
+    {"properties": {"outcome": {"properties": {"category": {"const": "correctness"}, "status": {"const": "PASS"}, "category_statuses": {"properties": {"correctness": {"const": "PASS"}}}}}}},
+    {"properties": {"outcome": {"properties": {"category": {"const": "correctness"}, "status": {"const": "FAIL"}, "category_statuses": {"properties": {"correctness": {"const": "FAIL"}}}}}}},
+    {"properties": {"outcome": {"properties": {"category": {"const": "correctness"}, "status": {"const": "NOT_RUN"}, "category_statuses": {"properties": {"correctness": {"const": "NOT_RUN"}}}}}}}
+  ]
+}
