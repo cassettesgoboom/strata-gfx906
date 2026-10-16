@@ -1,0 +1,83 @@
+{
+  "schema": "gfx906-runtime-smoke-v1",
+  "date_utc": "2026-10-16",
+  "classification": "short serial inference smoke; not a benchmark or correctness parity test",
+  "source": {
+    "fork_main_commit": "64185a40962121b9adfc20e0e1a45b634cfeb472",
+    "build_receipt": "2026-10-16-current-main-equivalent.json",
+    "native_sha256": "73a0f98105938850c749a3f0ed1dfe08e1753a97379aa9741c7fb73351c0137c",
+    "server_sha256": "6c45c639e28a873b854606719d9ce2bb2e0df666f105164e78e2735878b9aa8f"
+  },
+  "distribution": {
+    "base_runtime_index_digest": "sha256:a7527bd8efe2dcdb0a0a7fd6b96761507ce79f9d585ce1649ce5b91158258a29",
+    "new_binary_mounted_into_runtime": true,
+    "new_binary_published_as_image": false,
+    "archived_image_native_sha256": "ae93901c79771ace15db52942523c25fc46dd6f0d6a3b43698b28e6071c472cb"
+  },
+  "environment": {
+    "hardware_class": "two AMD Instinct MI50 32 GB cards, gfx906",
+    "model_family": "Swift Qwen3.8 Flash-Next GSQ-RCO IQ3_XXS",
+    "model_assets_external": true,
+    "model_asset_full_hashes_recomputed": false,
+    "layer_split": "24+24",
+    "configured_context_per_request": 4096,
+    "kv": "k8v4",
+    "spec": 4,
+    "batch_abcd": false
+  },
+  "preflight": {
+    "cpu_only_same_mount_layout": "passed",
+    "server_lazy_start_without_model": "passed",
+    "lazy_api_health_http": 200,
+    "required_asset_paths_resolved": true,
+    "mounted_native_sha256_verified": true
+  },
+  "gpu_smoke": {
+    "api_ready": true,
+    "requests": [
+      {
+        "kind": "first",
+        "http_status": 200,
+        "prompt_tokens": 75,
+        "reused_tokens": 0,
+        "generated_tokens": 146,
+        "finish_reason": "stop",
+        "wall_seconds": 4.551,
+        "native_decode_tokens_per_second": 62.6,
+        "mtp_offered": 120,
+        "mtp_accepted": 97,
+        "nonempty_answer": true
+      },
+      {
+        "kind": "continuation_using_actual_first_answer",
+        "http_status": 200,
+        "prompt_tokens": 173,
+        "reused_tokens": 70,
+        "generated_tokens": 130,
+        "finish_reason": "stop",
+        "wall_seconds": 3.687,
+        "native_decode_tokens_per_second": 58.1,
+        "mtp_offered": 88,
+        "mtp_accepted": 76,
+        "nonempty_answer": true
+      }
+    ],
+    "native_totals": {
+      "requests": 2,
+      "generated_tokens": 276,
+      "reused_prompt_tokens": 70,
+      "mtp_offered": 208,
+      "mtp_accepted": 173
+    },
+    "candidate_swap_bytes": 0,
+    "candidate_oom_events": 0,
+    "clean_shutdown": true,
+    "protected_services_healthy_afterward": true
+  },
+  "limitations": [
+    "The short single-request decode rates are diagnostic smoke values and are not comparable with archived multi-agent benchmarks.",
+    "The run does not exercise AB/CD, sustained throughput, exact native output-token parity, or recurrent-state parity.",
+    "The current-source binary differs from the archived benchmarked binary and is not present in the published base image.",
+    "Full external model-asset hashes were not recomputed for this smoke."
+  ]
+}
