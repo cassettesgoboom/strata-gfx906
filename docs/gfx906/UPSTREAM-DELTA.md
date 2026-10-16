@@ -16,18 +16,26 @@ This note maps gfx906-relevant features to public upstream commits observed on 2
 - [PR #17](https://github.com/cassettesgoboom/strata-gfx906/pull/17) updates the comparator and synthetic fixtures
   to v2 transaction-window token vectors and window-end state comparison. The current
   `python tools/gfx906.py test-cpu` suite passes 44 CPU tests. This remains a comparison contract, not runtime evidence.
+- [PR #19](https://github.com/cassettesgoboom/strata-gfx906/pull/19) extends the unused CPU-side transaction
+  registry with two-phase commit intent and result. `begin_commit` validates and copies accepted-prefix intent into
+  registry-owned state, and its accessor returns a copy; the slice remains undrained while device commit may run.
+  `finish_commit` records success only after the runtime observes it. A post-launch failure or abort requires
+  explicit device drain followed by session recovery/discard acknowledgement before retirement. Validation is 44
+  Python tests plus a separate focused C++20 transaction test. The contract remains unwired to `Verifier`/scheduler and implements no inference,
+  QSA rollback, GPU transaction isolation, or parity.
 
 These fork PRs document archived evidence and add CPU-side future-validation scaffolding. They do not alter the
 upstream feature history below or supply new source-to-image provenance. The
 [current-main blockers in Issue #1](https://github.com/cassettesgoboom/strata-gfx906/issues/1) remain: the lifecycle
 registry is not wired into `Verifier` or the scheduler; per-slice graph, staging, and poll ownership is not
-integrated; safe drain-before-reuse is not established; and accepted-prefix-only persistent-state commit is not
-established. Ordinary rejection restores the QSA tail and re-appends accepted keys, but it is not general rollback
-for failed or aborted same-session overlapping slices: indexer appends also mutate dead, pooled, and block-position
-state, and GDN commit mutates persistent recurrence state in place. This rollback gap also needs resolution and tests.
-The next source gate is to implement those guarantees, then use a pinned current-main build for isolated
-serial-versus-AB/CD GPU checks of ordered native token IDs and state hashes at matching window ends. Keep AB/CD
-opt-in until those runtime checks pass.
+integrated; and the registry's commit-intent/result and recovery gates are not connected to actual device work.
+Ordinary rejection restores the QSA tail and re-appends accepted keys, but it is not general rollback for failed or
+aborted same-session overlapping slices: indexer appends also mutate dead, pooled, and block-position state, and
+GDN commit mutates persistent recurrence state in place. The registry requires drain and session recovery/discard
+after a post-launch failure or abort, but it does not implement these actions or resolve that rollback gap. The
+single next source gate is to integrate this lifecycle and recovery behavior in the current-main verifier/scheduler,
+then use a pinned current-main build for isolated serial-versus-AB/CD GPU checks of ordered native token IDs and window-end state
+hashes. Keep AB/CD opt-in until those runtime checks pass.
 
 ## Feature-to-commit map
 
