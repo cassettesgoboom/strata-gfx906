@@ -1,5 +1,5 @@
 {
-  "trace_kind": "native_commit_trace",
+  "trace_kind": "native_transaction_trace_v2",
   "mode": "serial_off",
   "provenance": {
     "synthetic": true,
@@ -26,7 +26,6 @@
       "commits": [
         {
           "commit_index": 0,
-          "native_token_id": 900,
           "mtp_offered_token_ids": [
             900,
             901
@@ -35,15 +34,21 @@
             900
           ],
           "gdn_state_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          "recurrent_state_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          "recurrent_state_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "native_token_ids": [
+            900,
+            901
+          ]
         },
         {
           "commit_index": 1,
-          "native_token_id": 902,
           "mtp_offered_token_ids": [],
           "mtp_accepted_token_ids": [],
           "gdn_state_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-          "recurrent_state_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          "recurrent_state_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "native_token_ids": [
+            902
+          ]
         }
       ],
       "input_token_ids_sha256": "5555555555555555555555555555555555555555555555555555555555555555",

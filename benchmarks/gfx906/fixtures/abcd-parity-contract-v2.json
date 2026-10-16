@@ -1,8 +1,8 @@
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "purpose": "Exact serial-OFF versus opt-in AB/CD-ON correctness comparison at native committed boundaries",
   "evidence_class": "contract_only_no_measurement",
-  "trace_format": "native_commit_trace",
+  "trace_format": "native_transaction_trace_v2",
   "required_pair": {
     "serial": "mode=serial_off, STRATA_BATCH_ABCD unset or 0",
     "candidate": "mode=abcd_on, STRATA_BATCH_ABCD=1",
@@ -23,23 +23,23 @@
   ],
   "required_per_commit_fields": [
     "commit_index",
-    "native_token_id",
+    "native_token_ids",
     "mtp_offered_token_ids",
     "mtp_accepted_token_ids",
     "gdn_state_sha256",
     "recurrent_state_sha256"
   ],
   "comparison": {
-    "boundary": "Each serialized committed request step after the same scheduler transaction has committed; compare matching request_id and commit_index.",
+    "boundary": "Each serialized committed request transaction/window after it has committed; commit_index identifies this boundary. A window may emit one or more native token IDs.",
     "first_divergence_order": [
       "request order as supplied (must match exactly)",
       "commit_index ascending",
       "fields in required_per_commit_fields order"
     ],
-    "token_ids": "Exact integer equality. Compare native token IDs before detokenization, streaming, or HTTP serialization.",
+    "token_ids": "Require a non-empty ordered list of non-negative native token IDs per transaction/window and compare lists exactly before detokenization, streaming, or HTTP serialization.",
     "mtp": "Exact ordered equality of offered and accepted token ID sequences at each commit; include empty sequences when no proposal is offered/accepted.",
     "cache": "Exact equality of cache key and native reused/fresh token counts per request; use identical prior turn history and prove reuse from native counters.",
-    "persistent_state": "Require lowercase 64-character SHA-256 digests over canonical serialized bytes of every persistent per-layer GDN and other recurrent state at each same commit boundary. Serialization must identify layer, tensor shape, dtype, and byte order. If canonical bytes cannot be captured, state parity is unproven and this comparator must fail closed; numeric tolerance fallback is not supported.",
+    "persistent_state": "State hashes are sampled only at commit_window_end (after the full transaction/window commit), not after each token in native_token_ids. Require lowercase 64-character SHA-256 digests over canonical serialized bytes of every persistent per-layer GDN and other recurrent state at that boundary. Serialization must identify layer, tensor shape, dtype, and byte order. If canonical bytes cannot be captured, state parity is unproven and this comparator must fail closed; numeric tolerance fallback is not supported.",
     "occupancy": "Record offered/active lanes and device-side window intervals per request. Occupancy is an execution observation, not a parity field; claim overlap only when native counters and device timing show concurrent active work.",
     "request_ids": "Require unique stable IDs and identical request order across traces.",
     "commit_indices": "Require each request trace to contain ordered, zero-based, contiguous commit_index values; gaps, negative indices, and reordered commits invalidate the trace.",
@@ -62,5 +62,5 @@
     "A final-output match does not replace checking every commit boundary through the first divergence."
   ],
   "cpu_check": "python3 tests/gfx906/test_abcd_parity.py",
-  "limitation_addendum": "runtime_parity_claim is always false, regardless of provenance.synthetic. The comparator cannot authenticate capture or provenance; an equal result compares supplied traces only. Native capture authenticity and full correctness require independent evidence."
+  "limitation_addendum": "runtime_parity_claim is always false, regardless of provenance.synthetic. The comparator cannot authenticate capture or provenance; an equal result compares supplied traces only. Native capture authenticity and full correctness require independent evidence. This v2 format replaces singular native_token_id records; v1 traces are rejected and must be regenerated or explicitly migrated with original transaction-boundary evidence. Do not infer per-token state snapshots from window-end state hashes."
 }
