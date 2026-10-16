@@ -22,7 +22,10 @@ upstream feature history below or supply new source-to-image provenance. The
 [current-main blockers in Issue #1](https://github.com/cassettesgoboom/strata-gfx906/issues/1) remain: the lifecycle
 registry is not wired into `Verifier` or the scheduler; per-slice graph, staging, and poll ownership is not
 integrated; safe drain-before-reuse is not established; and accepted-prefix-only persistent-state commit is not
-established. The next source gate is to implement those guarantees, then use a pinned current-main build for isolated
+established. Ordinary rejection restores the QSA tail and re-appends accepted keys, but it is not general rollback
+for failed or aborted same-session overlapping slices: indexer appends also mutate dead, pooled, and block-position
+state, and GDN commit mutates persistent recurrence state in place. This rollback gap also needs resolution and tests.
+The next source gate is to implement those guarantees, then use a pinned current-main build for isolated
 serial-versus-AB/CD GPU checks of ordered native token IDs and state hashes at matching window ends. Keep AB/CD
 opt-in until those runtime checks pass.
 

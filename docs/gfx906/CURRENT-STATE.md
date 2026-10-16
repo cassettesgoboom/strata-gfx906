@@ -37,6 +37,10 @@ See [evidence index](EVIDENCE.md) for scope and provenance. The
 **Issue #1 current-main verifier blockers:** the PR #15 transaction registry is unused scaffolding, not wired into
 `Verifier` or the scheduler. The current-main port still needs per-slice graph, staging, and poll ownership; proven
 device-work drain before resources are reused; and persistent-state commits limited to accepted prefixes.
+Ordinary reject handling restores the QSA tail and re-appends accepted keys, but it is not general rollback for
+failed or aborted same-session overlapping slices: indexer appends also mutate dead, pooled, and block-position
+state, while GDN commit mutates persistent recurrence state in place. This rollback gap must be resolved and
+tested as part of verifier integration without assuming a particular implementation.
 **Next source gate:** integrate those lifecycle guarantees, then build from a pinned current-main revision and run
 an isolated GPU comparison against serial that checks ordered native token IDs and recurrent-state hashes at
 matching committed window ends. Keep AB/CD opt-in unless those runtime gates pass. Archived source-to-image proof
