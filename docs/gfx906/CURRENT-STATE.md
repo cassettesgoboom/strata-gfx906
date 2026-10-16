@@ -1,13 +1,16 @@
 # gfx906 current state
 
-**Recorded:** 2026-10-16. **Stage:** public gfx906 foundation and current-main build fixes are merged; the new
+**Recorded:** 2026-10-17. **Stage:** public gfx906 foundation and current-main build fixes are merged; the new
 source-equivalent binary passed a short serial MI50 GPU smoke. PR [#11](https://github.com/cassettesgoboom/strata-gfx906/pull/11)
 adds archived MI50 measurements. PR [#12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) introduced a
 CPU-only AB/CD trace comparator; [#17](https://github.com/cassettesgoboom/strata-gfx906/pull/17) supersedes its
 v1 record format with ordered token vectors per committed transaction/window and state hashes at window end.
 PR [#15](https://github.com/cassettesgoboom/strata-gfx906/pull/15) adds an unused host-side transaction lifecycle
-registry. `python tools/gfx906.py test-cpu` passes 44 CPU tests. These changes do not integrate AB/CD into the
-runtime, establish GPU overlap or parity, or change the published image.
+registry; [#19](https://github.com/cassettesgoboom/strata-gfx906/pull/19) adds two-phase commit intent/result,
+accepted-prefix validation and copy, and explicit drain/recovery gates to that CPU contract. The registry remains
+unused by the runtime. `python tools/gfx906.py test-cpu` passes 44 Python tests; PR #19 also passes a separate,
+focused C++20 transaction test. These changes do not integrate AB/CD into the runtime, establish GPU overlap or
+parity, or change the published image.
 
 - **Source base:** upstream `296b59d2f73c8f04a805df29c2fa97655adace78`.
 - **Archived native binary:** SHA-256 `ae93901c79771ace15db52942523c25fc46dd6f0d6a3b43698b28e6071c472cb`.
@@ -23,7 +26,7 @@ runtime, establish GPU overlap or parity, or change the published image.
   existing traces need regeneration or migration backed by original transaction-boundary evidence. Output
   always has `runtime_parity_claim=false`; synthetic equality checks comparator behavior only. The tool cannot
   authenticate capture or prove runtime parity. No current-main AB/CD port or runtime parity validation is included.
-- **Transaction lifecycle boundary:** PR #15 adds a host-side registry for two disjoint row slices, immutable slot/token/position snapshots, registry-bound handles, lifecycle transitions, accepted-prefix bounds, and drain-before-reuse, with negative CPU cases. The hosted workflow passes 42 Python CPU tests and the C++20 transaction test. This is scaffolding only: the registry is not wired into `Verifier` or the scheduler, and there is no GPU overlap, device completion/drain, runtime token parity, or recurrent-state parity proof.
+- **Transaction lifecycle boundary:** PR #15 introduced a host-side registry for two disjoint row slices, immutable slot/token/position snapshots, and lifecycle transitions. PR #19 adds two-phase commit intent/result: `begin_commit` validates and stores accepted prefixes in registry-owned state; `finish_commit` records success only after the runtime observes the device result. The slice remains undrained during commit. Post-launch failure or abort requires explicit device drain and session recovery/discard before retirement. The accessor copies the validated accepted-prefix intent so later caller-array changes cannot alter it. Validation is 44 Python tests plus a separate focused C++20 transaction test. This remains scaffolding: it is not wired into `Verifier` or the scheduler, and does not implement QSA rollback, GPU transaction isolation, inference, or parity.
 - **Current source:** upstream v0.1.44.1 already includes gfx906, K8/V4, and serial batch-MTP paths; see
   [the dated upstream map](UPSTREAM-DELTA.md). The current-main-equivalent build has a short serial GPU smoke,
   but current main has not passed batch AB/CD or parity validation; archived binary results do not validate it.
@@ -34,14 +37,15 @@ runtime, establish GPU overlap or parity, or change the published image.
 
 See [evidence index](EVIDENCE.md) for scope and provenance. The
 [build-receipt schema](../../benchmarks/gfx906/build-receipt-v1.schema.json) supports future reproducible build records.
-**Issue #1 current-main verifier blockers:** the PR #15 transaction registry is unused scaffolding, not wired into
-`Verifier` or the scheduler. The current-main port still needs per-slice graph, staging, and poll ownership; proven
-device-work drain before resources are reused; and persistent-state commits limited to accepted prefixes.
-Ordinary reject handling restores the QSA tail and re-appends accepted keys, but it is not general rollback for
-failed or aborted same-session overlapping slices: indexer appends also mutate dead, pooled, and block-position
-state, while GDN commit mutates persistent recurrence state in place. This rollback gap must be resolved and
-tested as part of verifier integration without assuming a particular implementation.
-**Next source gate:** integrate those lifecycle guarantees, then build from a pinned current-main revision and run
-an isolated GPU comparison against serial that checks ordered native token IDs and recurrent-state hashes at
-matching committed window ends. Keep AB/CD opt-in unless those runtime gates pass. Archived source-to-image proof
-remains open.
+**Issue #1 current-main verifier blockers:** the PR #15/#19 registry remains unused scaffolding, not wired into
+`Verifier` or the scheduler. Current main still needs per-slice graph, staging, and poll ownership and must tie
+commit intent to observed device results. The CPU contract requires post-launch failure/abort to drain device work
+and obtain session recovery/discard acknowledgement before retirement, but it does not implement those runtime
+actions. Ordinary reject handling restores the QSA tail and re-appends accepted keys, but it is not general rollback
+for failed or aborted same-session overlapping slices: indexer appends also mutate dead, pooled, and block-position
+state, while GDN commit mutates persistent recurrence state in place. This rollback gap remains unresolved.
+**Next source gate:** wire the transaction lifecycle and recovery contract into the current-main verifier/scheduler,
+including slice-local resource ownership, device drain, and recovery of affected session state after failure or
+abort; then build from a pinned current-main revision and run an isolated GPU comparison against serial for ordered
+native token IDs and recurrent-state hashes at matching window ends. Keep AB/CD opt-in until those runtime checks
+pass. Archived source-to-image proof remains open.
