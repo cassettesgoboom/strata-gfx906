@@ -2,6 +2,13 @@
 
 This note maps gfx906-relevant features to public upstream commits observed on 2026-10-16. It describes source history only; it does not identify the source commit used to build the archived container.
 
+## Public fork updates
+
+- [PR #11](https://github.com/cassettesgoboom/strata-gfx906/pull/11) adds the README's archived dual-MI50 cached multi-agent measurement table and links the canonical evidence and provenance. It changes documentation only; the archived image and engine are unchanged.
+- [PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds a CPU-only comparator contract for supplied serial-OFF / AB/CD-ON native commit traces, synthetic fixtures, and negative tests. It is trace comparison tooling only: output always states `runtime_parity_claim=false`, it cannot authenticate trace capture, and it does not establish runtime token/state parity. It does not port AB/CD to current main or change the image.
+
+These fork PRs document archived evidence and provide a CPU-side future-validation tool. They do not alter the upstream feature history below or supply new source-to-image provenance.
+
 ## Feature-to-commit map
 
 | Feature | Upstream commit (date) | Scope and relationship |
