@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CPU-only comparator for serial OFF vs opt-in AB/CD ON native traces.
 
-The input format is specified by benchmarks/gfx906/fixtures/abcd-parity-contract-v1.json.
+The input format is specified by benchmarks/gfx906/fixtures/abcd-parity-contract-v2.json.
 It compares committed results at the same request/commit boundary, and reports the
 first differing boundary. It deliberately does not treat host/API text as native proof.
 """
@@ -16,7 +16,7 @@ from typing import Any
 
 
 PARITY_FIELDS = (
-    "native_token_id",
+    "native_token_ids",
     "mtp_offered_token_ids",
     "mtp_accepted_token_ids",
     "gdn_state_sha256",
@@ -47,8 +47,8 @@ def load(path: Path) -> dict[str, Any]:
 
 
 def _index_run(run: dict[str, Any], label: str) -> tuple[dict[str, dict[str, Any]], str | None]:
-    if run.get("trace_kind") != "native_commit_trace":
-        return {}, f"{label}: trace_kind must be native_commit_trace"
+    if run.get("trace_kind") != "native_transaction_trace_v2":
+        return {}, f"{label}: trace_kind must be native_transaction_trace_v2"
     requests = run.get("requests")
     if not isinstance(requests, list) or not requests:
         return {}, f"{label}: requests must be a non-empty list"
@@ -83,8 +83,10 @@ def _index_run(run: dict[str, Any], label: str) -> tuple[dict[str, dict[str, Any
             for field in PARITY_FIELDS:
                 if field not in step:
                     return {}, f"{label}: {rid} commit {boundary}: missing {field}"
-            if type(step["native_token_id"]) is not int or step["native_token_id"] < 0:
-                return {}, f"{label}: {rid} commit {boundary}: native_token_id must be a non-negative integer"
+            token_ids = step["native_token_ids"]
+            if (not isinstance(token_ids, list) or not token_ids or
+                    any(type(token_id) is not int or token_id < 0 for token_id in token_ids)):
+                return {}, f"{label}: {rid} commit {boundary}: native_token_ids must be a non-empty list of non-negative integer token IDs"
             for field in ("mtp_offered_token_ids", "mtp_accepted_token_ids"):
                 ids = step[field]
                 if not isinstance(ids, list) or any(type(token_id) is not int or token_id < 0 for token_id in ids):
@@ -149,6 +151,7 @@ def compare(serial: dict[str, Any], abcd: dict[str, Any]) -> dict[str, Any]:
         "synthetic_contract_only": bool(serial["provenance"].get("synthetic") or abcd["provenance"].get("synthetic")),
         "runtime_parity_claim": False,
         "warning": "Equality compares supplied traces only; capture/provenance authenticity and full correctness require independent evidence.",
+        "state_comparison_boundary": "commit_window_end",
         "first_divergence": None,
         "occupancy": {
             "serial": serial.get("occupancy"),

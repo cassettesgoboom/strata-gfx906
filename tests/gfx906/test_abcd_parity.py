@@ -23,14 +23,25 @@ class AbcdParityTests(unittest.TestCase):
         self.assertTrue(result["synthetic_contract_only"])
         self.assertFalse(result["runtime_parity_claim"])
         self.assertIn("authenticity", result["warning"])
+        self.assertEqual(result["state_comparison_boundary"], "commit_window_end")
         self.assertFalse(result["occupancy"]["compared_for_parity"])
         self.assertNotEqual(result["occupancy"]["serial"], result["occupancy"]["abcd"])
 
-    def test_first_token_divergence_is_reported(self):
+    def test_multi_token_window_matches_and_first_list_divergence_is_reported(self):
+        self.assertEqual(self.serial["requests"][0]["commits"][0]["native_token_ids"], [900, 901])
+        self.assertEqual(abcd_parity.compare(self.serial, self.abcd)["equal"], True)
         changed = deepcopy(self.abcd)
-        changed["requests"][0]["commits"][1]["native_token_id"] += 1
+        changed["requests"][0]["commits"][0]["native_token_ids"] = [900, 999]
         result = abcd_parity.compare(self.serial, changed)
-        self.assertEqual(result["first_divergence"], "request r-01 commit 1: native_token_id differs")
+        self.assertEqual(result["first_divergence"], "request r-01 commit 0: native_token_ids differs")
+
+    def test_window_end_state_is_not_claimed_per_emitted_token(self):
+        result = abcd_parity.compare(self.serial, self.abcd)
+        commit = self.abcd["requests"][0]["commits"][0]
+        self.assertGreater(len(commit["native_token_ids"]), 1)
+        self.assertEqual(result["state_comparison_boundary"], "commit_window_end")
+        self.assertIn("gdn_state_sha256", commit)
+        self.assertNotIn("per_token_state_sha256", commit)
 
     def test_mtp_decisions_are_compared(self):
         changed = deepcopy(self.abcd)
@@ -108,8 +119,10 @@ class AbcdParityTests(unittest.TestCase):
 
     def test_token_fields_reject_wrong_types_and_booleans(self):
         mutations = (
-            ("native_token_id", True),
-            ("native_token_id", "900"),
+            ("native_token_ids", [True]),
+            ("native_token_ids", ["900"]),
+            ("native_token_ids", []),
+            ("native_token_ids", [-1]),
             ("mtp_offered_token_ids", [True]),
             ("mtp_accepted_token_ids", "[900]"),
         )
@@ -118,6 +131,13 @@ class AbcdParityTests(unittest.TestCase):
                 changed = deepcopy(self.abcd)
                 changed["requests"][0]["commits"][0][field] = value
                 self.assertFalse(abcd_parity.compare(self.serial, changed)["equal"])
+
+    def test_singular_v1_token_field_is_rejected(self):
+        changed = deepcopy(self.abcd)
+        step = changed["requests"][0]["commits"][0]
+        step["native_token_id"] = step.pop("native_token_ids")[0]
+        result = abcd_parity.compare(self.serial, changed)
+        self.assertIn("missing native_token_ids", result["first_divergence"])
 
     def test_missing_synthetic_markers_never_enable_runtime_claim(self):
         serial = deepcopy(self.serial)
