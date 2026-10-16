@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import platform
 import re
 import shlex
@@ -21,23 +22,42 @@ UNITS = {"tokens/s", "ms", "s", "tokens", "GiB", "MiB", "C", "%", "count", "bool
 
 
 def load_json(path: Path) -> Any:
+    def reject_constant(value: str) -> None:
+        raise ValueError(f"non-standard JSON number {value}")
+
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        return json.loads(path.read_text(encoding="utf-8"), parse_constant=reject_constant)
+    except (OSError, ValueError) as exc:
         raise ValueError(f"{path}: {exc}") from exc
+
+
+def is_int(value: Any) -> bool:
+    return type(value) is int
+
+
+def is_number(value: Any) -> bool:
+    return type(value) in {int, float} and math.isfinite(value)
+
+
+def reject_unknown(obj: Any, allowed: set[str], path: str, errors: list[str]) -> None:
+    if isinstance(obj, dict):
+        for key in sorted(obj.keys() - allowed):
+            errors.append(f"unknown property {path}.{key}")
 
 
 def validate(record: Any) -> list[str]:
     errors: list[str] = []
     if not isinstance(record, dict):
         return ["record must be a JSON object"]
+    reject_unknown(record, {"schema_version", "run_id", "provenance", "hardware", "workload", "outcome",
+                            "measurements", "cache_evidence", "concurrency"}, "$", errors)
     required = ("schema_version", "run_id", "provenance", "hardware", "workload", "outcome", "measurements")
     for key in required:
         if key not in record:
             errors.append(f"missing required field: {key}")
     if errors:
         return errors
-    if record["schema_version"] != 1:
+    if not is_int(record["schema_version"]) or record["schema_version"] != 1:
         errors.append("schema_version must be 1")
     if not isinstance(record["run_id"], str) or not record["run_id"].strip():
         errors.append("run_id must be a non-empty string")
@@ -46,6 +66,7 @@ def validate(record: Any) -> list[str]:
     if not isinstance(provenance, dict):
         errors.append("provenance must be an object")
         provenance = {}
+    reject_unknown(provenance, {"repository", "commit", "engine_version", "source", "build_id", "command", "synthetic"}, "provenance", errors)
     for key in ("repository", "commit", "engine_version", "source", "build_id", "command"):
         if not isinstance(provenance.get(key), str) or not provenance[key].strip():
             errors.append(f"missing provenance.{key}")
@@ -54,35 +75,41 @@ def validate(record: Any) -> list[str]:
         errors.append("provenance.commit must be a hexadecimal commit SHA")
     if provenance.get("synthetic"):
         errors.append("synthetic fixture cannot be reported as run evidence")
+    if "synthetic" in provenance and not isinstance(provenance["synthetic"], bool):
+        errors.append("provenance.synthetic must be boolean")
 
     hardware = record["hardware"]
     if not isinstance(hardware, dict):
         errors.append("hardware must be an object")
         hardware = {}
+    reject_unknown(hardware, {"gpu_model", "architecture", "rocm_version", "vram_gib", "ram_gib"}, "hardware", errors)
     for key in ("gpu_model", "architecture", "rocm_version"):
         if not isinstance(hardware.get(key), str) or not hardware[key].strip():
             errors.append(f"missing hardware.{key}")
-    if hardware.get("architecture") and hardware["architecture"].lower() != "gfx906":
-        errors.append("hardware.architecture must be gfx906")
+    if hardware.get("architecture") and hardware["architecture"] != "gfx906":
+        errors.append("hardware.architecture must equal gfx906 exactly")
     for key in ("vram_gib", "ram_gib"):
-        if not isinstance(hardware.get(key), (int, float)) or hardware[key] <= 0:
+        if not is_number(hardware.get(key)) or hardware[key] <= 0:
             errors.append(f"hardware.{key} must be a positive number in GiB")
 
     workload = record["workload"]
     if not isinstance(workload, dict):
         errors.append("workload must be an object")
         workload = {}
+    reject_unknown(workload, {"model", "quant", "mode", "context_tokens", "prompt_tokens", "output_tokens", "batch"}, "workload", errors)
     for key in ("model", "quant", "mode"):
         if not isinstance(workload.get(key), str) or not workload[key].strip():
             errors.append(f"missing workload.{key}")
     for key in ("context_tokens", "prompt_tokens", "output_tokens", "batch"):
-        if not isinstance(workload.get(key), int) or workload[key] <= 0:
+        if not is_int(workload.get(key)) or workload[key] <= 0:
             errors.append(f"workload.{key} must be a positive integer count of tokens/slots")
 
     outcome = record["outcome"]
     if not isinstance(outcome, dict):
         errors.append("outcome must be an object")
         outcome = {}
+    reject_unknown(outcome, {"category", "status", "output_complete", "cache_state", "actual_output_tokens", "finish_reason",
+                             "sustained_tokens_min", "native_output_tokens", "native_output_source_ref", "category_statuses", "notes"}, "outcome", errors)
     category = outcome.get("category")
     if category not in VALID_CATEGORIES:
         errors.append("outcome.category must be capacity, performance, or correctness")
@@ -93,32 +120,46 @@ def validate(record: Any) -> list[str]:
         errors.append("outcome.finish_reason must be eos, length, stop, cancel, or error")
     actual = outcome.get("actual_output_tokens")
     requested = workload.get("output_tokens")
-    if not isinstance(actual, int) or actual < 0:
+    if not is_int(actual) or actual < 0:
         errors.append("outcome.actual_output_tokens must be a non-negative integer")
-    elif isinstance(requested, int) and actual > requested:
+    elif is_int(requested) and actual > requested:
         errors.append("actual_output_tokens cannot exceed requested output_tokens")
-    if outcome.get("status") == "PASS" and (outcome.get("output_complete") is not True or not isinstance(actual, int) or actual < 1):
+    if not isinstance(outcome.get("output_complete"), bool):
+        errors.append("outcome.output_complete must be boolean")
+    if outcome.get("status") == "PASS" and (outcome.get("output_complete") is not True or not is_int(actual) or actual < 1):
         errors.append("PASS requires a non-empty output complete for its finish reason")
-    if finish_reason == "length" and isinstance(actual, int) and isinstance(requested, int) and actual != requested:
+    if finish_reason == "length" and is_int(actual) and is_int(requested) and actual != requested:
         errors.append("finish_reason=length requires actual_output_tokens to equal the requested cap")
     sustained = outcome.get("sustained_tokens_min")
-    if sustained is not None and (not isinstance(sustained, int) or sustained < 1 or not isinstance(actual, int) or actual < sustained):
+    if sustained is not None and (not is_int(sustained) or sustained < 1 or not is_int(actual) or actual < sustained):
         errors.append("sustained_tokens_min claim exceeds measured actual_output_tokens")
     if sustained is not None:
         native_count = outcome.get("native_output_tokens")
         native_source = outcome.get("native_output_source_ref")
-        if native_count != actual or not isinstance(native_source, str) or not native_source.strip():
+        if not is_int(native_count) or native_count != actual or not isinstance(native_source, str) or not native_source.strip():
             errors.append("sustained output claim requires matching native_output_tokens and native_output_source_ref")
+    elif "native_output_tokens" in outcome and not is_int(outcome["native_output_tokens"]):
+        errors.append("outcome.native_output_tokens must be an integer")
+    if "native_output_source_ref" in outcome and not isinstance(outcome["native_output_source_ref"], str):
+        errors.append("outcome.native_output_source_ref must be a string")
+    if "notes" in outcome and not isinstance(outcome["notes"], str):
+        errors.append("outcome.notes must be a string")
     category_statuses = outcome.get("category_statuses")
-    if not isinstance(category_statuses, dict) or set(category_statuses) != VALID_CATEGORIES:
+    if isinstance(category_statuses, dict):
+        reject_unknown(category_statuses, VALID_CATEGORIES, "outcome.category_statuses", errors)
+    if not isinstance(category_statuses, dict) or not VALID_CATEGORIES.issubset(category_statuses):
         errors.append("outcome.category_statuses must separately specify capacity, performance, and correctness")
-    elif any(status not in {"PASS", "FAIL", "NOT_RUN"} for status in category_statuses.values()):
+    if isinstance(category_statuses, dict) and any(status not in {"PASS", "FAIL", "NOT_RUN"} for status in category_statuses.values()):
         errors.append("each category_statuses value must be PASS, FAIL, or NOT_RUN")
-    elif category in VALID_CATEGORIES and category_statuses[category] != outcome.get("status"):
+    elif isinstance(category_statuses, dict) and set(category_statuses) == VALID_CATEGORIES and category in VALID_CATEGORIES and category_statuses[category] != outcome.get("status"):
         errors.append("outcome.status must match category_statuses for the selected category")
 
     cache_state = outcome.get("cache_state")
     cache_evidence = record.get("cache_evidence")
+    if cache_evidence is not None and not isinstance(cache_evidence, dict):
+        errors.append("cache_evidence must be an object")
+        cache_evidence = None
+    reject_unknown(cache_evidence, {"prompt_identity_sha256", "reused_tokens", "fresh_tokens", "source_ref"}, "cache_evidence", errors)
     if cache_state not in {"cold", "warm", "cached", "unknown"}:
         errors.append("outcome.cache_state must be cold, warm, cached, or unknown")
     if cache_state in {"warm", "cached", "cold"}:
@@ -133,15 +174,15 @@ def validate(record: Any) -> list[str]:
             source_ref = cache_evidence.get("source_ref")
             if not isinstance(source_ref, str) or not source_ref.strip():
                 errors.append("cache_evidence.source_ref is required")
-            if not isinstance(reused, int) or reused < 0 or not isinstance(fresh, int) or fresh < 0:
+            if not is_int(reused) or reused < 0 or not is_int(fresh) or fresh < 0:
                 errors.append("cache_evidence reused_tokens and fresh_tokens must be non-negative integers")
-            elif isinstance(workload.get("prompt_tokens"), int) and reused + fresh != workload["prompt_tokens"]:
+            elif is_int(workload.get("prompt_tokens")) and reused + fresh != workload["prompt_tokens"]:
                 errors.append("cache reused_tokens + fresh_tokens must equal prompt_tokens")
-            if cache_state == "cold" and isinstance(reused, int) and reused != 0:
+            if cache_state == "cold" and is_int(reused) and reused != 0:
                 errors.append("cold cache claim requires reused_tokens=0")
-            if cache_state in {"warm", "cached"} and isinstance(reused, int) and reused < 1:
+            if cache_state in {"warm", "cached"} and is_int(reused) and reused < 1:
                 errors.append("warm/cached claim requires reused_tokens > 0")
-            if cache_state == "cached" and isinstance(reused, int) and isinstance(workload.get("prompt_tokens"), int):
+            if cache_state == "cached" and is_int(reused) and is_int(workload.get("prompt_tokens")):
                 if reused / workload["prompt_tokens"] < 0.98:
                     errors.append("cache_state=cached requires at least 98% reused prompt tokens")
     elif cache_evidence is not None:
@@ -156,7 +197,11 @@ def validate(record: Any) -> list[str]:
     elif not measurements:
         errors.append("measurements must contain at least one measured value")
     for name, measurement in measurements.items():
-        if not isinstance(measurement, dict) or not isinstance(measurement.get("value"), (int, float)):
+        if not isinstance(measurement, dict):
+            errors.append(f"measurement {name!r} must be an object")
+            continue
+        reject_unknown(measurement, {"value", "unit"}, f"measurements.{name}", errors)
+        if not is_number(measurement.get("value")):
             errors.append(f"measurement {name!r} requires a numeric value")
             continue
         if measurement.get("unit") not in UNITS:
@@ -167,26 +212,40 @@ def validate(record: Any) -> list[str]:
         if not isinstance(concurrency, dict):
             errors.append("concurrency must be an object")
         else:
+            reject_unknown(concurrency, {"strict_overlap_claim", "token_output_envelopes_ms", "native_occupancy"}, "concurrency", errors)
+            if "strict_overlap_claim" not in concurrency or not isinstance(concurrency.get("strict_overlap_claim"), bool):
+                errors.append("concurrency.strict_overlap_claim must be boolean")
             strict_claim = concurrency.get("strict_overlap_claim") is True
-            intervals = concurrency.get("token_output_envelopes_ms", [])
+            intervals = concurrency.get("token_output_envelopes_ms")
             if not isinstance(intervals, list):
                 errors.append("concurrency.token_output_envelopes_ms must be a list")
                 intervals = []
             parsed: list[tuple[float, float]] = []
+            request_ids: list[str] = []
             for i, interval in enumerate(intervals):
-                if (not isinstance(interval, dict) or not isinstance(interval.get("start_ms"), (int, float))
-                        or not isinstance(interval.get("end_ms"), (int, float)) or interval["end_ms"] <= interval["start_ms"]
-                        or not isinstance(interval.get("emitted_tokens"), int) or interval["emitted_tokens"] < 1
-                        or not isinstance(interval.get("request_id"), str) or not interval["request_id"]):
-                    errors.append(f"token output envelope {i} needs request_id, start_ms < end_ms, and emitted_tokens > 0")
+                if not isinstance(interval, dict):
+                    errors.append(f"token output envelope {i} must be an object")
+                    continue
+                reject_unknown(interval, {"request_id", "start_ms", "end_ms", "emitted_tokens", "native_emitted_tokens"},
+                               f"concurrency.token_output_envelopes_ms[{i}]", errors)
+                request_id = interval.get("request_id")
+                start, end = interval.get("start_ms"), interval.get("end_ms")
+                emitted, native_emitted = interval.get("emitted_tokens"), interval.get("native_emitted_tokens")
+                if not isinstance(request_id, str) or not request_id:
+                    errors.append(f"token output envelope {i} requires a non-empty request_id")
+                else:
+                    request_ids.append(request_id)
+                if not is_number(start) or not is_number(end) or end <= start:
+                    errors.append(f"token output envelope {i} requires finite numeric start_ms < end_ms")
                 else:
                     parsed.append((interval["start_ms"], interval["end_ms"]))
-                    if interval.get("native_emitted_tokens") != interval["emitted_tokens"]:
-                        errors.append(f"token output envelope {i} client/native emitted token counts disagree")
+                if not is_int(emitted) or emitted < 1 or not is_int(native_emitted) or native_emitted < 1:
+                    errors.append(f"token output envelope {i} requires positive integer client/native token counts")
+                elif native_emitted != emitted:
+                    errors.append(f"token output envelope {i} client/native emitted token counts disagree")
             if strict_claim:
                 if len(parsed) < 2:
                     errors.append("strict overlap claim requires at least two token output envelopes")
-                request_ids = [item.get("request_id") for item in intervals if isinstance(item, dict)]
                 if len(request_ids) != len(set(request_ids)):
                     errors.append("strict overlap claim requires a unique request_id per token output envelope")
                 expected_lanes = len(set(request_ids))
@@ -194,75 +253,91 @@ def validate(record: Any) -> list[str]:
                 overlap_end = min((end for _, end in parsed), default=0)
                 if len(parsed) >= 2 and overlap_start >= overlap_end:
                     errors.append("strict overlap claim requires a common token-output intersection greater than zero")
-                occupancy = concurrency.get("native_occupancy")
-                if not isinstance(occupancy, dict):
-                    errors.append("strict overlap claim requires explicit native occupancy evidence")
-                else:
-                    source_ref = occupancy.get("source_ref")
-                    if not isinstance(source_ref, str) or not source_ref.strip():
-                        errors.append("native occupancy requires source_ref")
-                    peak = occupancy.get("active_slots_peak")
-                    offered = occupancy.get("offered_slots")
-                    if not isinstance(peak, int) or not isinstance(offered, int) or peak < expected_lanes or peak > offered or offered < expected_lanes:
-                        errors.append(f"native occupancy must prove {expected_lanes} active lanes <= offered_slots")
-                    if occupancy.get("evidence_kind") not in {"native_window_counter", "native_slot_intervals"}:
-                        errors.append("native occupancy evidence_kind must be native_window_counter or native_slot_intervals")
-                    if occupancy.get("evidence_kind") == "native_window_counter":
-                        wstart, wend = occupancy.get("window_start_ms"), occupancy.get("window_end_ms")
-                        if (not isinstance(wstart, (int, float)) or not isinstance(wend, (int, float)) or wend <= wstart
-                                or wstart > overlap_start or wend < overlap_end):
-                            errors.append("native counter window must cover the common token-output intersection")
-                        samples = occupancy.get("samples_ms", [])
-                        if not isinstance(samples, list):
-                            errors.append("native counter samples_ms must be a list")
-                            samples = []
-                        valid_samples = []
-                        for sample in samples:
-                            if (not isinstance(sample, dict) or not isinstance(sample.get("time_ms"), (int, float))
-                                    or not isinstance(sample.get("active_slots"), int) or sample["active_slots"] < 0):
-                                errors.append("native counter sample needs numeric time_ms and non-negative active_slots")
+            occupancy = concurrency.get("native_occupancy")
+            if occupancy is not None and not isinstance(occupancy, dict):
+                errors.append("concurrency.native_occupancy must be an object")
+                occupancy = None
+            if strict_claim and not isinstance(occupancy, dict):
+                errors.append("strict overlap claim requires explicit native occupancy evidence")
+            if isinstance(occupancy, dict):
+                reject_unknown(occupancy, {"evidence_kind", "source_ref", "offered_slots", "active_slots_peak",
+                                           "window_start_ms", "window_end_ms", "samples_ms", "slot_intervals_ms"},
+                               "concurrency.native_occupancy", errors)
+                source_ref = occupancy.get("source_ref")
+                if not isinstance(source_ref, str) or not source_ref.strip():
+                    errors.append("native occupancy requires source_ref")
+                peak = occupancy.get("active_slots_peak")
+                offered = occupancy.get("offered_slots")
+                if not is_int(peak) or not is_int(offered) or peak < 1 or offered < peak:
+                    errors.append("native occupancy requires integer 1 <= active_slots_peak <= offered_slots")
+                elif strict_claim and (peak < expected_lanes or offered < expected_lanes):
+                    errors.append(f"native occupancy must prove {expected_lanes} active lanes <= offered_slots")
+                if occupancy.get("evidence_kind") not in {"native_window_counter", "native_slot_intervals"}:
+                    errors.append("native occupancy evidence_kind must be native_window_counter or native_slot_intervals")
+                if occupancy.get("evidence_kind") == "native_window_counter":
+                    wstart, wend = occupancy.get("window_start_ms"), occupancy.get("window_end_ms")
+                    if not is_number(wstart) or not is_number(wend) or wend <= wstart:
+                        errors.append("native counter window requires finite numeric window_start_ms < window_end_ms")
+                    elif strict_claim and (wstart > overlap_start or wend < overlap_end):
+                        errors.append("native counter window must cover the common token-output intersection")
+                    samples = occupancy.get("samples_ms")
+                    if not isinstance(samples, list):
+                        errors.append("native counter samples_ms must be a list")
+                        samples = []
+                    valid_samples = []
+                    for sample in samples:
+                        if not isinstance(sample, dict):
+                            errors.append("native counter sample must be an object")
+                            continue
+                        reject_unknown(sample, {"time_ms", "active_slots"}, "concurrency.native_occupancy.samples_ms[]", errors)
+                        time_ms, active_slots = sample.get("time_ms"), sample.get("active_slots")
+                        if not is_number(time_ms) or not is_int(active_slots) or active_slots < 0:
+                            errors.append("native counter sample needs finite time_ms and non-negative integer active_slots")
+                            continue
+                        valid_samples.append(sample)
+                        if is_int(offered) and active_slots > offered:
+                            errors.append("native counter active_slots exceeds offered_slots")
+                        if is_number(wstart) and is_number(wend) and not wstart <= time_ms <= wend:
+                            errors.append("native counter sample falls outside its declared window")
+                    if valid_samples and is_int(peak) and max(s["active_slots"] for s in valid_samples) != peak:
+                        errors.append("native active_slots_peak does not match native counter samples")
+                    if strict_claim and not any(overlap_start <= s["time_ms"] <= overlap_end and s["active_slots"] >= expected_lanes
+                                                for s in valid_samples):
+                        errors.append(f"native counter samples do not prove {expected_lanes} active lanes during token overlap")
+                if occupancy.get("evidence_kind") == "native_slot_intervals":
+                    slot_intervals = occupancy.get("slot_intervals_ms")
+                    if not isinstance(slot_intervals, list):
+                        errors.append("native slot intervals must be a list")
+                    else:
+                        native = []
+                        for si in slot_intervals:
+                            if not isinstance(si, dict):
+                                errors.append("native slot interval must be an object")
+                                continue
+                            reject_unknown(si, {"start_ms", "end_ms"}, "concurrency.native_occupancy.slot_intervals_ms[]", errors)
+                            start, end = si.get("start_ms"), si.get("end_ms")
+                            if not is_number(start) or not is_number(end) or end <= start:
+                                errors.append("native slot interval requires finite numeric start_ms < end_ms")
                             else:
-                                valid_samples.append(sample)
-                                if isinstance(offered, int) and sample["active_slots"] > offered:
-                                    errors.append("native counter active_slots exceeds offered_slots")
-                                if (isinstance(wstart, (int, float)) and isinstance(wend, (int, float))
-                                        and not wstart <= sample["time_ms"] <= wend):
-                                    errors.append("native counter sample falls outside its declared window")
-                        if valid_samples and isinstance(peak, int) and max(s["active_slots"] for s in valid_samples) != peak:
-                            errors.append("native active_slots_peak does not match native counter samples")
-                        if not any(overlap_start <= s["time_ms"] <= overlap_end and s["active_slots"] >= expected_lanes
-                                   for s in valid_samples):
-                            errors.append(f"native counter samples do not prove {expected_lanes} active lanes during token overlap")
-                    if occupancy.get("evidence_kind") == "native_slot_intervals":
-                        slot_intervals = occupancy.get("slot_intervals_ms", [])
-                        if not isinstance(slot_intervals, list):
-                            errors.append("native slot intervals must be a list")
-                        else:
-                            native = []
-                            for si in slot_intervals:
-                                if (not isinstance(si, dict) or not isinstance(si.get("start_ms"), (int, float))
-                                        or not isinstance(si.get("end_ms"), (int, float)) or si["end_ms"] <= si["start_ms"]):
-                                    errors.append("native slot interval requires numeric start_ms < end_ms")
-                                else:
-                                    native.append((si["start_ms"], si["end_ms"]))
-                            events = [(start, 1) for start, _ in native] + [(end, -1) for _, end in native]
-                            active = native_peak = 0
-                            for _, delta in sorted(events, key=lambda event: (event[0], event[1])):
-                                active += delta
-                                native_peak = max(native_peak, active)
-                            if isinstance(peak, int) and native_peak != peak:
-                                errors.append(f"native occupancy peak {peak} does not match native interval evidence {native_peak}")
-                            events_clipped = []
-                            for start, end in native:
-                                left, right = max(start, overlap_start), min(end, overlap_end)
-                                if left < right:
-                                    events_clipped.extend(((left, 1), (right, -1)))
-                            active = intersection_peak = 0
-                            for _, delta in sorted(events_clipped, key=lambda event: (event[0], event[1])):
-                                active += delta
-                                intersection_peak = max(intersection_peak, active)
-                            if intersection_peak < expected_lanes:
-                                errors.append(f"native slot intervals do not prove {expected_lanes} active lanes during token overlap")
+                                native.append((start, end))
+                        events = [(start, 1) for start, _ in native] + [(end, -1) for _, end in native]
+                        active = native_peak = 0
+                        for _, delta in sorted(events, key=lambda event: (event[0], event[1])):
+                            active += delta
+                            native_peak = max(native_peak, active)
+                        if is_int(peak) and native_peak != peak:
+                            errors.append(f"native occupancy peak {peak} does not match native interval evidence {native_peak}")
+                        events_clipped = []
+                        for start, end in native:
+                            left, right = max(start, overlap_start), min(end, overlap_end)
+                            if left < right:
+                                events_clipped.extend(((left, 1), (right, -1)))
+                        active = intersection_peak = 0
+                        for _, delta in sorted(events_clipped, key=lambda event: (event[0], event[1])):
+                            active += delta
+                            intersection_peak = max(intersection_peak, active)
+                        if strict_claim and intersection_peak < expected_lanes:
+                            errors.append(f"native slot intervals do not prove {expected_lanes} active lanes during token overlap")
     return errors
 
 
@@ -333,7 +408,7 @@ def cmd_report(args: argparse.Namespace) -> int:
             start = max(item["start_ms"] for item in envelopes)
             end = min(item["end_ms"] for item in envelopes)
             emitted = sum(item["emitted_tokens"] for item in envelopes)
-            print(f"Strict token overlap: {max(0, end - start):g} ms common intersection; {emitted} emitted tokens measured")
+            print(f"Common token-output interval: {max(0, end - start):g} ms; {emitted} total envelope tokens (not the interval numerator)")
     for name, metric in record["measurements"].items():
         print(f"{name}: {metric['value']} {metric['unit']}")
     return 0
@@ -412,10 +487,15 @@ def cmd_bench_plan(args: argparse.Namespace) -> int:
         if not args.json_out or not args.save_dir:
             print("--apply requires --json-out and --save-dir so results and raw answers use explicit paths", file=sys.stderr)
             return 2
-        if checkout_path(args.json_out).exists() or checkout_path(args.save_dir).exists():
+        json_path = checkout_path(args.json_out)
+        save_path = checkout_path(args.save_dir)
+        if json_path.resolve() == save_path.resolve():
+            print("--json-out and --save-dir must resolve to different paths", file=sys.stderr)
+            return 2
+        if json_path.exists() or save_path.exists():
             print("--json-out and --save-dir must not already exist; refusing to overwrite", file=sys.stderr)
             return 2
-        if not checkout_path(args.json_out).parent.is_dir():
+        if not json_path.parent.is_dir():
             print("the --json-out parent directory must already exist", file=sys.stderr)
             return 2
         target, out, save_dir = args.target_url, args.json_out, args.save_dir

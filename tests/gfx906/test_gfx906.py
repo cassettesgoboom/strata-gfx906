@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import io
+import tempfile
 import unittest
 from argparse import Namespace
 from contextlib import redirect_stdout
@@ -50,6 +51,59 @@ def with_strict_overlap(record_value):
 class EvidenceValidationTests(unittest.TestCase):
     def test_minimal_complete_record(self):
         self.assertEqual(gfx906.validate(record()), [])
+
+    def test_unknown_properties_are_rejected_for_fixed_schema_objects(self):
+        cases = []
+        item = record(); item["extra"] = 1; cases.append(item)
+        item = record(); item["provenance"]["extra"] = 1; cases.append(item)
+        item = record(); item["hardware"]["extra"] = 1; cases.append(item)
+        item = record(); item["workload"]["extra"] = 1; cases.append(item)
+        item = record(); item["outcome"]["extra"] = 1; cases.append(item)
+        item = record(); item["outcome"]["category_statuses"]["extra"] = "PASS"; cases.append(item)
+        item = record(); item["cache_evidence"]["extra"] = 1; cases.append(item)
+        item = record(); item["measurements"]["decode"]["extra"] = 1; cases.append(item)
+        item = with_strict_overlap(record()); item["concurrency"]["extra"] = 1; cases.append(item)
+        item = with_strict_overlap(record()); item["concurrency"]["token_output_envelopes_ms"][0]["extra"] = 1; cases.append(item)
+        item = with_strict_overlap(record()); item["concurrency"]["native_occupancy"]["extra"] = 1; cases.append(item)
+        item = with_strict_overlap(record()); item["concurrency"]["native_occupancy"]["samples_ms"][0]["extra"] = 1; cases.append(item)
+        for item in cases:
+            with self.subTest(item=item):
+                self.assertTrue(any("unknown property" in error for error in gfx906.validate(item)))
+
+    def test_cli_object_boundaries_match_schema_additional_properties(self):
+        schema = json.loads((ROOT / "benchmarks/gfx906/schema-v1.json").read_text())
+
+        def walk(node):
+            if isinstance(node, dict):
+                if node.get("type") == "object" and "properties" in node:
+                    self.assertIs(node.get("additionalProperties"), False)
+                for value in node.values():
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+
+        walk(schema)
+
+    def test_exact_architecture_and_json_numeric_types(self):
+        item = record(); item["hardware"]["architecture"] = "GFX906"
+        self.assertTrue(any("equal gfx906 exactly" in error for error in gfx906.validate(item)))
+        item = record(); item["workload"]["batch"] = True
+        self.assertTrue(any("workload.batch" in error for error in gfx906.validate(item)))
+        item = record(); item["hardware"]["vram_gib"] = True
+        self.assertTrue(any("hardware.vram_gib" in error for error in gfx906.validate(item)))
+        item = record(); item["measurements"]["decode"]["value"] = True
+        self.assertTrue(any("requires a numeric value" in error for error in gfx906.validate(item)))
+
+    def test_non_finite_numbers_are_rejected(self):
+        for value in (float("nan"), float("inf"), float("-inf")):
+            item = record(); item["measurements"]["decode"]["value"] = value
+            self.assertTrue(any("requires a numeric value" in error for error in gfx906.validate(item)))
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "nan.json"
+            path.write_text('{"value": NaN}')
+            with self.assertRaises(ValueError):
+                gfx906.load_json(path)
 
     def test_missing_provenance_is_rejected(self):
         item = record()
@@ -160,6 +214,14 @@ class EvidenceValidationTests(unittest.TestCase):
     def test_bench_apply_refuses_existing_output(self):
         args = Namespace(command="bench-p2", target_url="http://127.0.0.1:8080", json_out=str(Path(__file__)),
                          save_dir="new-answer-dir", apply=True, rounds=3, max_tokens=512)
+        with patch.object(gfx906.subprocess, "run") as run:
+            self.assertEqual(gfx906.cmd_bench_plan(args), 2)
+        run.assert_not_called()
+
+    def test_bench_apply_refuses_resolved_equivalent_output_paths(self):
+        args = Namespace(command="bench-p2", target_url="http://127.0.0.1:8080",
+                         json_out="new-dir/../same-output.json", save_dir="same-output.json",
+                         apply=True, rounds=3, max_tokens=512)
         with patch.object(gfx906.subprocess, "run") as run:
             self.assertEqual(gfx906.cmd_bench_plan(args), 2)
         run.assert_not_called()
