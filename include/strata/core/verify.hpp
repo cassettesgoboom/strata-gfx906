@@ -55,6 +55,32 @@ struct VerifyHits {
     int64_t blob = 0;
 };
 
+/// Caller-owned snapshot for one disjoint AB/CD slice of a batch window.
+/// Readiness/error/abort generations are host-owned; no device-side wait is implied.
+struct BatchTransaction {
+    int row_base = 0;
+    int size = 0;
+    int slots[8] = {};
+    int32_t tokens[8] = {};
+    int32_t results[8] = {};
+    int64_t positions[8] = {};
+    uint32_t generation = 0;
+    uint32_t ready_generation = 0;
+    uint32_t error_generation = 0;
+    uint32_t abort_generation = 0;
+    uint64_t id = 0;
+    // Diagnostic-only host bounds and per-device event timing for one AB/CD graph.
+    int64_t diag_host_event_begin_ns = 0;
+    int64_t diag_host_event_end_ns = 0;
+    bool diag_event_timing = false;
+    bool require_ready = false;
+    bool ar_off = false;
+    bool prepared = false;
+    bool launched = false;
+    bool complete = false;
+    bool committed = false;
+};
+
 class Verifier {
 public:
     Verifier() = default;
@@ -167,6 +193,13 @@ public:
     /// Commit an accepted prefix in each contiguous slot group of the last window. `keep` has
     /// one entry per slot (indexed by slot ID), each in 1..that slot's group length.
     bool commit_slot_prefixes(const int* keep, std::string& err);
+    /// Host-ordered AB/CD row-slice API. Consumers require ready_generation == generation.
+    /// One launch may be in flight per Verifier. Commit is deferred and local to this stage.
+    bool batch_prepare_transaction(BatchTransaction& tx, int row_base, const int* slots, int S,
+                                   const int32_t* tokens, const int64_t* pos, std::string& err);
+    bool batch_launch_transaction(BatchTransaction& tx, std::string& err);
+    int batch_poll_transaction(BatchTransaction& tx, PoolMultiFn pool, void* user, std::string& err);
+    bool commit_slot_prefixes(BatchTransaction& tx, const int* keep, std::string& err);
     /// --batch-mtp: slot rotation makes many row layouts, so bound the captured batch graph pairs (LRU). 0 = unbounded.
     void set_batch_graph_limit(size_t n) { batch_graph_limit_ = n; }
 
@@ -276,16 +309,28 @@ private:
     std::vector<SessionState*> slots_;
     bool batch_rec_ = false;               ///< record_window is capturing a batch window
     int row_base_ = 0;                     ///< ... its hand-off rows start here (a pipeline group's own rows)
+    int scratch_base_ = 0;                 ///< row slice in the existing max_t_ arena for AB/CD transactions
     int brow_[8] = {};                     ///< ... and row t is slot brow_[t]
     bool last_batch_ = false;              ///< the last run was a batch window (set_plan_slot: one group)
     std::map<std::vector<int>, cudaGraphExec_t> exec_bm_, commit_bm_;   ///< full row layout avoids slot-ID collisions
     std::map<std::vector<int>, uint64_t> bm_used_;   ///< last use of each captured layout (LRU)
     uint64_t bm_tick_ = 0;
+    uint64_t next_batch_tx_id_ = 1;
+    uint64_t batch_tx_ids_[2] = {};
+    BatchTransaction batch_tx_snapshots_[2] = {};
+    // Per-slice events bracket the launched graph on this verifier's own stream/device.
+    cudaEvent_t abcd_event_begin_[2] = {};
+    cudaEvent_t abcd_event_end_[2] = {};
+    bool b_ar_on_ = false;            ///< residency variant selected by the currently launched batch graph
     size_t batch_graph_limit_ = 0;         ///< 0: keep every captured batch graph (0.1.39); N: LRU-evict beyond N layouts
     int last_rows_[8] = {};                ///< the slots of the last batch window's rows
-    std::vector<int> bkey(const int* rows, int S, int hbase) const {   // #871: the doorbell variant has its own graphs
+    std::vector<int> bkey(const int* rows, int S, int hbase) const {
+        return bkey(rows, S, hbase, scratch_base_, ar_off_);
+    }
+    std::vector<int> bkey(const int* rows, int S, int hbase, int scratch_base, bool ar_off) const {
         std::vector<int> k = batch_key(rows, S, hbase);
-        k.push_back(ar_off_ ? 1 : 0);
+        k.push_back(scratch_base);
+        k.push_back(ar_off ? 1 : 0);        // #871: the doorbell variant has its own graphs
         return k;
     }
     static std::vector<int> batch_key(const int* rows, int S, int hbase) {
@@ -328,7 +373,9 @@ private:
     int32_t pl_prev_[2] = {-1, -1};
     std::vector<uint32_t> pl_ple_rows_;   ///< the window's PLE rows (T x PLE_N_HEADS), gathered when layer 0 is served
     bool capture_commit_batch(const int* rows, int S, int hbase, std::string& err);
-    bool stage_batch(const int* rows, int S, int hbase, const int32_t* tokens, const int64_t* pos, std::string& err);
+    bool batch_tx_matches(const BatchTransaction& tx) const;
+    bool stage_batch(const int* rows, int S, int hbase, const int32_t* tokens, const int64_t* pos, std::string& err,
+                     int scratch_base = 0);
     strata::kernels::SamplerParams sampling_ = [] {
         strata::kernels::SamplerParams s;
         s.greedy = true;
