@@ -72,11 +72,17 @@ int main() {
     int keep_cd[8] = {};
     keep_cd[2] = 0;
     keep_cd[3] = 1;
-    check(!registry.commit(cd, keep_cd, err), "later-group accepted prefix zero is rejected");
+    check(!registry.begin_commit(cd, keep_cd, err), "later-group accepted prefix zero is rejected");
     keep_cd[2] = 3;
-    check(!registry.commit(cd, keep_cd, err), "later-group prefix beyond its row group is rejected");
+    check(!registry.begin_commit(cd, keep_cd, err), "later-group prefix beyond its row group is rejected");
     keep_cd[2] = 2;
-    check(registry.commit(cd, keep_cd, err), "later-group valid accepted prefixes commit");
+    check(registry.begin_commit(cd, keep_cd, err) &&
+          registry.state(cd) == BatchTransactionRegistry::State::Committing,
+          "later-group valid prefixes enter commit-in-progress");
+    check(!registry.retire(cd, err), "commit intent cannot retire before device completion");
+    check(registry.finish_commit(cd, true, err) &&
+          registry.state(cd) == BatchTransactionRegistry::State::Committed,
+          "successful device commit completion enters committed state");
     check(registry.retire(cd, err) && registry.state(ab) == BatchTransactionRegistry::State::Prepared,
           "CD retirement leaves AB slice ownership intact");
     const int alias_slots[] = {0, 0};
@@ -100,13 +106,17 @@ int main() {
     int keep[8] = {};
     keep[0] = 0;
     keep[1] = 1;
-    check(!registry.commit(ab, keep, err), "accepted prefix zero is rejected");
+    check(!registry.begin_commit(ab, keep, err), "accepted prefix zero is rejected");
     keep[0] = 3;
-    check(!registry.commit(ab, keep, err), "accepted prefix beyond its two-row slot group is rejected");
+    check(!registry.begin_commit(ab, keep, err), "accepted prefix beyond its two-row slot group is rejected");
     keep[0] = 2;
     keep[1] = 1;
-    check(registry.commit(ab, keep, err), "valid per-slot accepted prefixes commit");
-    check(!registry.commit(ab, keep, err), "duplicate commit is rejected");
+    check(registry.begin_commit(ab, keep, err), "valid per-slot accepted prefixes enter commit-in-progress");
+    check(registry.state(ab) == BatchTransactionRegistry::State::Committing,
+          "registry does not report committed before device completion");
+    check(!registry.begin_commit(ab, keep, err), "duplicate commit intent is rejected");
+    check(registry.finish_commit(ab, true, err), "successful device commit finishes");
+    check(!registry.begin_commit(ab, keep, err), "duplicate commit after success is rejected");
     check(!prepare(registry, 3, 0, ab_slots, ab_tokens, ab_positions, 4, duplicate),
           "committed slice stays owned until retirement");
     check(registry.retire(ab, err), "committed slice retires");
@@ -124,12 +134,41 @@ int main() {
     check(registry.mark_drained(replacement, err), "abort becomes reusable only after explicit drain");
     check(registry.retire(replacement, err), "drained abort retires");
 
+    BatchTransactionHandle aborted_commit;
+    check(prepare(registry, 31, 0, ab_slots, ab_tokens, ab_positions, 4, aborted_commit),
+          "prepare commit-abort transaction");
+    check(registry.mark_launched(aborted_commit, err) && registry.mark_complete(aborted_commit, ab_results, err),
+          "commit-abort transaction completes");
+    check(registry.begin_commit(aborted_commit, keep, err), "commit-abort transaction enters commit-in-progress");
+    check(registry.abort(aborted_commit, err) && registry.state(aborted_commit) == BatchTransactionRegistry::State::Aborted,
+          "in-progress commit can be aborted without claiming success");
+    check(!registry.retire(aborted_commit, err), "aborted commit cannot retire before drain");
+    check(registry.mark_drained(aborted_commit, err), "aborted commit requires explicit device drain");
+    check(!registry.retire(aborted_commit, err), "drain alone does not claim partial commit was rolled back");
+    check(registry.mark_recovered(aborted_commit, err), "aborted commit requires explicit restore or session discard");
+    check(registry.retire(aborted_commit, err), "recovered, drained aborted commit retires");
+
     BatchTransactionHandle failed;
     check(prepare(registry, 4, 0, ab_slots, ab_tokens, ab_positions, 4, failed), "prepare failure-path transaction");
     check(registry.mark_launched(failed, err), "failure-path transaction launches");
     check(registry.mark_failed(failed, err), "launched transaction enters failed state");
     check(!registry.retire(failed, err), "failed launched work cannot retire before drain");
     check(registry.mark_drained(failed, err) && registry.retire(failed, err), "drained failure retires");
+
+    BatchTransactionHandle failed_commit;
+    check(prepare(registry, 41, 0, ab_slots, ab_tokens, ab_positions, 4, failed_commit),
+          "prepare failed-commit transaction");
+    check(registry.mark_launched(failed_commit, err) && registry.mark_complete(failed_commit, ab_results, err),
+          "failed-commit transaction completes compute");
+    check(registry.begin_commit(failed_commit, keep, err), "failed-commit transaction enters commit-in-progress");
+    check(registry.finish_commit(failed_commit, false, err) &&
+          registry.state(failed_commit) == BatchTransactionRegistry::State::Failed,
+          "failed device commit enters failed state, never committed");
+    check(!registry.retire(failed_commit, err), "failed commit cannot retire before drain");
+    check(registry.mark_drained(failed_commit, err), "failed commit requires explicit device drain");
+    check(!registry.retire(failed_commit, err), "failed commit drain does not imply state recovery");
+    check(registry.mark_recovered(failed_commit, err), "failed commit requires explicit restore or session discard");
+    check(registry.retire(failed_commit, err), "recovered, drained failed commit retires");
 
     BatchTransactionHandle bad;
     const int noncontiguous[] = {0, 1, 0};
