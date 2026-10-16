@@ -5,8 +5,10 @@
 // observed completion and copied the target results.
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <string>
 
 namespace strata::core {
@@ -34,12 +36,13 @@ public:
 
 private:
     friend class BatchTransactionRegistry;
-    BatchTransactionHandle(int slice, uint64_t id, uint32_t generation)
-        : slice_(slice), id_(id), generation_(generation) {}
+    BatchTransactionHandle(int slice, uint64_t id, uint32_t generation, uint64_t registry_id)
+        : slice_(slice), id_(id), generation_(generation), registry_id_(registry_id) {}
 
     int slice_ = -1;
     uint64_t id_ = 0;
     uint32_t generation_ = 0;
+    uint64_t registry_id_ = 0;
 };
 
 /// Host-side state machine for two disjoint four-row slices (row bases 0 and 4).
@@ -47,6 +50,12 @@ private:
 class BatchTransactionRegistry {
 public:
     enum class State { Stale, Prepared, Launched, Complete, Failed, Aborted, Committed };
+
+    BatchTransactionRegistry() : registry_id_(allocate_registry_id()) {}
+    BatchTransactionRegistry(const BatchTransactionRegistry&) = delete;
+    BatchTransactionRegistry& operator=(const BatchTransactionRegistry&) = delete;
+    BatchTransactionRegistry(BatchTransactionRegistry&&) = delete;
+    BatchTransactionRegistry& operator=(BatchTransactionRegistry&&) = delete;
 
     bool prepare(uint32_t generation, int row_base, const int* slots, const int32_t* tokens,
                  const int64_t* positions, int row_count, BatchTransactionHandle& out, std::string& err) {
@@ -73,14 +82,26 @@ public:
             if (slots[i] < 0 || slots[i] >= kBatchTransactionMaxSlots)
                 return reject(err, "batch transaction slot is out of range");
             if (positions[i] < 0) return reject(err, "batch transaction position is negative");
-            if (i > 0 && slots[i] == slots[i - 1] && positions[i] != positions[i - 1] + 1)
-                return reject(err, "batch transaction slot rows need consecutive positions");
+            if (i > 0 && slots[i] == slots[i - 1]) {
+                if (positions[i - 1] == std::numeric_limits<int64_t>::max())
+                    return reject(err, "batch transaction consecutive position would overflow");
+                if (positions[i] != positions[i - 1] + 1)
+                    return reject(err, "batch transaction slot rows need consecutive positions");
+            }
             for (int j = 0; j < i - 1; ++j)
                 if (slots[j] == slots[i] && slots[i - 1] != slots[i])
                     return reject(err, "batch transaction slot rows must be contiguous");
             snapshot.slots[(size_t) i] = slots[i];
             snapshot.tokens[(size_t) i] = tokens[i];
             snapshot.positions[(size_t) i] = positions[i];
+        }
+        for (int other = 0; other < kBatchTransactionSlices; ++other) {
+            if (other == slice || !records_[other].active) continue;
+            const BatchTransactionSnapshot& active = records_[other].snapshot;
+            for (int i = 0; i < row_count; ++i)
+                for (int j = 0; j < active.row_count; ++j)
+                    if (snapshot.slots[(size_t) i] == active.slots[(size_t) j])
+                        return reject(err, "batch transaction slot is already owned by another active slice");
         }
 
         rec.active = true;
@@ -90,7 +111,7 @@ public:
         if (rec.id == 0) rec.id = next_id_++;
         rec.snapshot = snapshot;
         rec.handle_generation = generation;
-        out = BatchTransactionHandle(slice, rec.id, generation);
+        out = BatchTransactionHandle(slice, rec.id, generation, registry_id_);
         return true;
     }
 
@@ -102,7 +123,9 @@ public:
         return true;
     }
 
-    /// Call only after the GPU poll reports completion. This transition is the sole source of Complete state.
+    /// Trust boundary: the runtime owner must independently observe successful GPU poll completion and copy that
+    /// transaction's target results before calling this method. The registry owns lifecycle state; it cannot verify
+    /// device completion itself. This transition is the sole source of Complete state (there is no caller flag).
     bool mark_complete(const BatchTransactionHandle& handle, const int32_t* results, std::string& err) {
         Record* rec = find(handle);
         if (rec == nullptr || rec->state != State::Launched)
@@ -134,7 +157,8 @@ public:
         return true;
     }
 
-    /// Mark a failed/aborted launched transaction safe for reuse after its device work and waits are drained.
+    /// Trust boundary: the runtime owner must independently verify that device work and waits are drained before
+    /// calling this method. The registry cannot observe a GPU stream; this explicit acknowledgement gates retirement.
     bool mark_drained(const BatchTransactionHandle& handle, std::string& err) {
         Record* rec = find(handle);
         if (rec == nullptr || (rec->state != State::Failed && rec->state != State::Aborted))
@@ -205,18 +229,27 @@ private:
     }
 
     Record* find(const BatchTransactionHandle& handle) {
-        if (!handle.valid() || handle.slice_ < 0 || handle.slice_ >= kBatchTransactionSlices) return nullptr;
+        if (!handle.valid() || handle.registry_id_ != registry_id_ || handle.slice_ < 0 ||
+            handle.slice_ >= kBatchTransactionSlices) return nullptr;
         Record& rec = records_[handle.slice_];
         return rec.active && rec.id == handle.id_ && rec.handle_generation == handle.generation_ ? &rec : nullptr;
     }
 
     const Record* find(const BatchTransactionHandle& handle) const {
-        if (!handle.valid() || handle.slice_ < 0 || handle.slice_ >= kBatchTransactionSlices) return nullptr;
+        if (!handle.valid() || handle.registry_id_ != registry_id_ || handle.slice_ < 0 ||
+            handle.slice_ >= kBatchTransactionSlices) return nullptr;
         const Record& rec = records_[handle.slice_];
         return rec.active && rec.id == handle.id_ && rec.handle_generation == handle.generation_ ? &rec : nullptr;
     }
 
     std::array<Record, kBatchTransactionSlices> records_{};
+    inline static std::atomic<uint64_t> next_registry_id_{1};
+    static uint64_t allocate_registry_id() {
+        uint64_t id = next_registry_id_.fetch_add(1, std::memory_order_relaxed);
+        if (id == 0) id = next_registry_id_.fetch_add(1, std::memory_order_relaxed);
+        return id;
+    }
+    uint64_t registry_id_ = 0;
     uint64_t next_id_ = 1;
 };
 

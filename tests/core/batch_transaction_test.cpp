@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 #include <type_traits>
 
 using strata::core::BatchTransactionHandle;
@@ -61,7 +62,29 @@ int main() {
     BatchTransactionSnapshot saved_again;
     check(registry.snapshot(ab, saved_again, err) && saved_again.tokens[0] == 10,
           "mutating a caller snapshot copy cannot change registry identity");
-    check(registry.abort(cd, err) && registry.retire(cd, err), "unlaunched disjoint transaction releases its slice");
+
+    const int32_t cd_results[] = {32, 33, 42, 43};
+    check(registry.mark_launched(cd, err), "CD launches independently while AB remains prepared");
+    check(registry.mark_complete(cd, cd_results, err), "CD completes while AB remains active");
+    check(registry.state(ab) == BatchTransactionRegistry::State::Prepared &&
+          registry.state(cd) == BatchTransactionRegistry::State::Complete,
+          "CD completion does not overwrite AB state");
+    int keep_cd[8] = {};
+    keep_cd[2] = 0;
+    keep_cd[3] = 1;
+    check(!registry.commit(cd, keep_cd, err), "later-group accepted prefix zero is rejected");
+    keep_cd[2] = 3;
+    check(!registry.commit(cd, keep_cd, err), "later-group prefix beyond its row group is rejected");
+    keep_cd[2] = 2;
+    check(registry.commit(cd, keep_cd, err), "later-group valid accepted prefixes commit");
+    check(registry.retire(cd, err) && registry.state(ab) == BatchTransactionRegistry::State::Prepared,
+          "CD retirement leaves AB slice ownership intact");
+    const int alias_slots[] = {0, 0};
+    const int32_t alias_tokens[] = {50, 51};
+    const int64_t alias_positions[] = {500, 501};
+    check(!registry.prepare(3, 4, alias_slots, alias_tokens, alias_positions, 2, duplicate, err) &&
+          err.find("already owned") != std::string::npos,
+          "active slices cannot own the same slot");
 
     const int32_t ab_results[] = {12, 13, 22, 23};
     check(!registry.mark_complete(ab, ab_results, err), "completion cannot be forged before launch");
@@ -118,6 +141,10 @@ int main() {
     const int same_slot[] = {0, 0};
     check(!prepare(registry, 5, 0, same_slot, three_tokens, bad_positions, 2, bad),
           "nonconsecutive positions for one slot are rejected");
+    const int64_t max_then_wrap[] = {std::numeric_limits<int64_t>::max(), 0};
+    check(!registry.prepare(5, 0, same_slot, three_tokens, max_then_wrap, 2, bad, err) &&
+          err.find("overflow") != std::string::npos,
+          "consecutive-position check rejects signed overflow");
     check(!prepare(registry, 5, 2, ab_slots, ab_tokens, ab_positions, 4, bad), "unsupported slice base is rejected");
     check(!prepare(registry, 0, 0, ab_slots, ab_tokens, ab_positions, 4, bad), "zero generation is rejected");
 
@@ -130,6 +157,16 @@ int main() {
     check(duplicate_generation_rejected, "active generation cannot identify two transactions");
     check(registry.abort(generation_owner, err) && registry.retire(generation_owner, err),
           "unlaunched abort retires without device drain");
+
+    BatchTransactionRegistry registry_one;
+    BatchTransactionRegistry registry_two;
+    BatchTransactionHandle local_one, local_two;
+    check(prepare(registry_one, 11, 0, ab_slots, ab_tokens, ab_positions, 4, local_one) &&
+          prepare(registry_two, 11, 0, ab_slots, ab_tokens, ab_positions, 4, local_two),
+          "independent registries issue local transaction handles");
+    check(!registry_two.mark_launched(local_one, err) &&
+          registry_two.state(local_one) == BatchTransactionRegistry::State::Stale,
+          "a handle cannot be replayed against another registry");
 
     return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
