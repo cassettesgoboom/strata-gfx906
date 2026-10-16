@@ -1,0 +1,66 @@
+{
+  "contract_version": 1,
+  "purpose": "Exact serial-OFF versus opt-in AB/CD-ON correctness comparison at native committed boundaries",
+  "evidence_class": "contract_only_no_measurement",
+  "trace_format": "native_commit_trace",
+  "required_pair": {
+    "serial": "mode=serial_off, STRATA_BATCH_ABCD unset or 0",
+    "candidate": "mode=abcd_on, STRATA_BATCH_ABCD=1",
+    "same_build_and_inputs": true,
+    "same_ordered_request_ids": true,
+    "same_tokenizer_model_and_mtp_artifacts": true,
+    "greedy_or_identical_sampler_seed_and_state": true,
+    "cache_history_reproduced_exactly": true
+  },
+  "required_per_request_fields": [
+    "request_id",
+    "cache_key_sha256",
+    "cache_reused_tokens",
+    "cache_fresh_tokens",
+    "commits",
+    "input_token_ids_sha256",
+    "sampler_state_sha256"
+  ],
+  "required_per_commit_fields": [
+    "commit_index",
+    "native_token_id",
+    "mtp_offered_token_ids",
+    "mtp_accepted_token_ids",
+    "gdn_state_sha256",
+    "recurrent_state_sha256"
+  ],
+  "comparison": {
+    "boundary": "Each serialized committed request step after the same scheduler transaction has committed; compare matching request_id and commit_index.",
+    "first_divergence_order": [
+      "request order as supplied (must match exactly)",
+      "commit_index ascending",
+      "fields in required_per_commit_fields order"
+    ],
+    "token_ids": "Exact integer equality. Compare native token IDs before detokenization, streaming, or HTTP serialization.",
+    "mtp": "Exact ordered equality of offered and accepted token ID sequences at each commit; include empty sequences when no proposal is offered/accepted.",
+    "cache": "Exact equality of cache key and native reused/fresh token counts per request; use identical prior turn history and prove reuse from native counters.",
+    "persistent_state": "Require lowercase 64-character SHA-256 digests over canonical serialized bytes of every persistent per-layer GDN and other recurrent state at each same commit boundary. Serialization must identify layer, tensor shape, dtype, and byte order. If canonical bytes cannot be captured, state parity is unproven and this comparator must fail closed; numeric tolerance fallback is not supported.",
+    "occupancy": "Record offered/active lanes and device-side window intervals per request. Occupancy is an execution observation, not a parity field; claim overlap only when native counters and device timing show concurrent active work.",
+    "request_ids": "Require unique stable IDs and identical request order across traces.",
+    "commit_indices": "Require each request trace to contain ordered, zero-based, contiguous commit_index values; gaps, negative indices, and reordered commits invalidate the trace.",
+    "inputs_and_sampling": "Require matching SHA-256 hashes of native input token IDs and sampler state for each request.",
+    "provenance_hashes": "Require lowercase 64-character SHA-256 hex for binary, model, tokenizer, MTP, and normalized command identities. The normalized command identity includes all inputs and options except the OFF versus ON feature toggle; require that hash to match."
+  },
+  "minimum_trace_provenance": [
+    "source_commit",
+    "binary_sha256",
+    "model_sha256",
+    "tokenizer_sha256",
+    "mtp_sha256",
+    "command_sha256",
+    "device_and_runtime",
+    "trace_capture_method"
+  ],
+  "limitations": [
+    "Synthetic fixtures validate comparator behavior only; they are not model output or GPU evidence.",
+    "Host/API text, throughput, successful completion, and summed lane rates do not establish native token or persistent-state parity.",
+    "A final-output match does not replace checking every commit boundary through the first divergence."
+  ],
+  "cpu_check": "python3 tests/gfx906/test_abcd_parity.py",
+  "limitation_addendum": "runtime_parity_claim is always false, regardless of provenance.synthetic. The comparator cannot authenticate capture or provenance; an equal result compares supplied traces only. Native capture authenticity and full correctness require independent evidence."
+}
