@@ -6,6 +6,9 @@ on:
       - 'README.md'
       - 'tools/gfx906.py'
       - 'tests/gfx906/**'
+      - 'tests/core/batch_transaction_test.cpp'
+      - 'include/strata/core/batch_transaction.hpp'
+      - 'CMakeLists.txt'
       - 'benchmarks/gfx906/**'
       - 'docs/gfx906/**'
       - '.github/workflows/gfx906-cpu.yml'
@@ -14,6 +17,9 @@ on:
       - 'README.md'
       - 'tools/gfx906.py'
       - 'tests/gfx906/**'
+      - 'tests/core/batch_transaction_test.cpp'
+      - 'include/strata/core/batch_transaction.hpp'
+      - 'CMakeLists.txt'
       - 'benchmarks/gfx906/**'
       - 'docs/gfx906/**'
       - '.github/workflows/gfx906-cpu.yml'
@@ -34,6 +40,10 @@ jobs:
           python-version: '3.x'
       - name: CPU-only tests
         run: python tools/gfx906.py test-cpu
+      - name: Batch transaction lifecycle contract
+        run: |
+          c++ -std=c++20 -Wall -Wextra -Werror -Iinclude tests/core/batch_transaction_test.cpp -o "$RUNNER_TEMP/batch_transaction_test"
+          "$RUNNER_TEMP/batch_transaction_test"
       - name: Validate synthetic fixture is rejected as run evidence
         run: |
           set +e
