@@ -28,7 +28,7 @@ export CONFIG_FILE=/path/to/config.json
 
 docker run --rm --name strata-gfx906-exp \
   --device=/dev/kfd --device="$GPU0_RENDER" --device="$GPU1_RENDER" \
-  --ipc=host --ulimit memlock=-1 \
+  --ulimit memlock=-1 \
   -p 127.0.0.1:8080:8080 \
   --mount "type=bind,src=$MODEL_DIR,dst=/models,readonly" \
   --mount "type=bind,src=$DATA_DIR,dst=/data,readonly" \
@@ -49,5 +49,6 @@ setup environment variables such as `FAMILY` and `MODEL`, writes under `/data`, 
 forward the published image's server arguments. The published-digest command above must not be copied to an image
 built from this source tree.
 
-AB/CD behavior is experimental and has no parity guarantee. Do not infer its availability or default state in the
-published artifact from source-tree settings; use only options documented for the exact image and model config.
+AB/CD remains experimental and disabled by default. For a separately validated four-slot batch-MTP config,
+`-e STRATA_BATCH_ABCD=1` opts in on this archived image. Exact native-token and recurrent-state parity remain open;
+the current source checkout has not reproduced this binary.
