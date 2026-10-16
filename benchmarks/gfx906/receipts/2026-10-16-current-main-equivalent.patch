@@ -1,0 +1,57 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e28abd9..7573a3e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1439,22 +1439,24 @@ if(STRATA_NATIVE_EXPERTS)
+     foreach(_t IN LISTS _strata_mmq_cuda_types)
+       target_sources(strata_mmq PRIVATE ${_strata_mmq}/template-instances/mmq-instance-${_t}.cu)
+     endforeach()
+-    # NVFP4: W4A8 (default) in mmq_nvfp4_w4a8.cu with the plain architectures; the opt-in W4A4 needs RTX 50's FP4 MMA,
+-    # which exists only in the arch-specific target, so its one unit alone is built with 12x -> 12xa (the default
+-    # binary is unchanged and runs on sm_121; a card without that image falls back to W4A8 at run time)
+-    set(_strata_w4a4_archs ${CMAKE_CUDA_ARCHITECTURES})
+-    # (two steps: CMake before 3.29 rejects a \2 whose optional group did not match, "120" alone)
+-    list(TRANSFORM _strata_w4a4_archs REPLACE "^(12[0-9])$" "\\1a")
+-    list(TRANSFORM _strata_w4a4_archs REPLACE "^(12[0-9])-(real|virtual)$" "\\1a-\\2")
+-    add_library(strata_mmq_w4a4 STATIC src/prefill/mmq_nvfp4_w4a4.cu)
+-    set_target_properties(strata_mmq_w4a4 PROPERTIES CUDA_ARCHITECTURES "${_strata_w4a4_archs}")
+-    target_include_directories(strata_mmq_w4a4 PRIVATE ${_strata_gg}/include ${_strata_gg}/src ${_strata_mmq})
+-    target_compile_options(strata_mmq_w4a4 PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda -use_fast_math>)
+-    if(MSVC)
+-      target_compile_options(strata_mmq_w4a4 PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/bigobj>)
++    # NVFP4 W4A4 uses Blackwell-only CUDA headers and FP4 MMA; the gfx906 HIP path disables NVFP4 MMQ.
++    if(NOT STRATA_HIP_GFX906)
++      # W4A4 needs RTX 50's FP4 MMA, which exists only in the arch-specific target, so its one unit alone is built
++      # with 12x -> 12xa (the default binary is unchanged and runs on sm_121; absent images fall back to W4A8).
++      set(_strata_w4a4_archs ${CMAKE_CUDA_ARCHITECTURES})
++      # (two steps: CMake before 3.29 rejects a \2 whose optional group did not match, "120" alone)
++      list(TRANSFORM _strata_w4a4_archs REPLACE "^(12[0-9])$" "\\1a")
++      list(TRANSFORM _strata_w4a4_archs REPLACE "^(12[0-9])-(real|virtual)$" "\\1a-\\2")
++      add_library(strata_mmq_w4a4 STATIC src/prefill/mmq_nvfp4_w4a4.cu)
++      set_target_properties(strata_mmq_w4a4 PROPERTIES CUDA_ARCHITECTURES "${_strata_w4a4_archs}")
++      target_include_directories(strata_mmq_w4a4 PRIVATE ${_strata_gg}/include ${_strata_gg}/src ${_strata_mmq})
++      target_compile_options(strata_mmq_w4a4 PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda -use_fast_math>)
++      if(MSVC)
++        target_compile_options(strata_mmq_w4a4 PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/bigobj>)
++      endif()
++      target_link_libraries(strata_mmq_w4a4 PUBLIC ggml-base ${_strata_gpu_runtime_target})
++      target_link_libraries(strata_mmq PRIVATE strata_mmq_w4a4)
+     endif()
+-    target_link_libraries(strata_mmq_w4a4 PUBLIC ggml-base ${_strata_gpu_runtime_target})
+-    target_link_libraries(strata_mmq PRIVATE strata_mmq_w4a4)
+     target_include_directories(strata_mmq PRIVATE ${_strata_gg}/include ${_strata_gg}/src ${_strata_mmq}
+                                PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+     target_compile_options(strata_mmq PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda -use_fast_math>)
+diff --git a/include/strata/platform/hip_compat/cublas_v2.h b/include/strata/platform/hip_compat/cublas_v2.h
+index fe8ea15..51afb01 100644
+--- a/include/strata/platform/hip_compat/cublas_v2.h
++++ b/include/strata/platform/hip_compat/cublas_v2.h
+@@ -13,6 +13,8 @@
+ #define cublasDestroy hipblasDestroy
+ #define cublasSetStream hipblasSetStream
+ #define cublasGemmEx hipblasGemmEx
++#define cublasSgemm hipblasSgemm
++#define cublasGemmStridedBatchedEx hipblasGemmStridedBatchedEx
+ #define CUBLAS_OP_N HIPBLAS_OP_N
+ #define CUBLAS_OP_T HIPBLAS_OP_T
+ #define CUBLAS_GEMM_DEFAULT HIPBLAS_GEMM_DEFAULT

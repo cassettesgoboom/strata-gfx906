@@ -5,7 +5,7 @@
     "repository": "https://github.com/cassettesgoboom/strata-gfx906",
     "commit": "02f500b8056f9cc7af27dfa577476e69eaab75a6",
     "dirty": true,
-    "patch_bundle_ref": "https://github.com/cassettesgoboom/strata-gfx906/pull/6 and https://github.com/cassettesgoboom/strata-gfx906/pull/7",
+    "patch_bundle_ref": "benchmarks/gfx906/receipts/2026-10-16-current-main-equivalent.patch",
     "patch_bundle_sha256": "cf7c2d282ac1a12203ce916ee2878a5961f4e909b80549a73cec9ad1ee111038"
   },
   "target": {
