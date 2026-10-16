@@ -11,5 +11,6 @@ from the existence of that recipe or a previously published native binary.
 
 This page records architecture context, not validation. The fork has no GPU validation of upstream v0.1.44.1. Public
 historical throughput evidence is limited to the pinned binary, dual MI50 32 GB, and K8/V4 configuration. It does
-not validate current source; AB/CD opt-in behavior and token/state parity remain open. See [current state](CURRENT-STATE.md),
-[evidence index](EVIDENCE.md), and [known limitations](KNOWN-LIMITATIONS.md).
+not validate current source; the archived AB/CD opt-in delta is not ported here and token/state parity remains open.
+See [current state](CURRENT-STATE.md), [evidence index](EVIDENCE.md), and
+[known limitations](KNOWN-LIMITATIONS.md).

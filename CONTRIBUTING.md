@@ -15,6 +15,9 @@ Before proposing a change:
   structure.
 - Do not include private host paths, topology, logs, credentials, or model data in public issues or commits.
 
+For updates from upstream, follow the [upstream synchronization guide](docs/gfx906/UPSTREAM-SYNC.md). Keep original
+commits and compare existing equivalents before carrying an experimental patch forward.
+
 For a report or request, choose the matching checked-in form under [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/).
 Include only public, reproducible details and label unavailable measurements explicitly.
 

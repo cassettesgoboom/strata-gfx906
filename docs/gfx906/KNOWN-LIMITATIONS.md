@@ -6,8 +6,8 @@
 - There is no GPU validation of upstream v0.1.44.1 in the current fork evidence.
 - Public hardware evidence is limited to dual MI50 32 GB and K8/V4 configuration. It does not establish behavior on
   one card, other gfx906 cards, other capacities, or other KV configurations.
-- AB/CD switches are opt-in. Their correctness and performance status remains open; the switch existing or compiling
-  does not establish parity.
+- The archived binary's AB/CD switch is opt-in; its local source delta has not been reviewed and ported into this
+  fork. The archived performance result does not establish correctness or token/state parity.
 - Token parity and state parity remain open. Do not use matching short output as a substitute for session-state
   validation.
 - The inherited build instructions do not establish that current dependencies, compilers, or ROCm versions can

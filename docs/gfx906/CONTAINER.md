@@ -5,6 +5,9 @@ The experimental image is available at
 The [release record](PROVENANCE.md) identifies the native binary inside an archived digest pullback. This source
 checkout has not been shown to rebuild that binary. The image contains no model weights; mount a compatible GGUF,
 tokenizer/pack, and model-specific data externally. Hardware memory needs depend on the model and host.
+The **published digest** has entrypoint `python3 -m serve.server` and accepts the trailing server arguments below;
+the inherited upstream source Dockerfile uses a different entrypoint. This example applies to the published digest,
+not to an image built from the current source.
 
 ## Pull
 
@@ -19,6 +22,9 @@ Prepare `config.json` for the image's Strata server entrypoint. It must use cont
 model's own pack and the upstream Strata configuration documentation. Select two render devices on your machine
 and set the paths below. The numeric render-device suffixes, GPU ordering, model memory budget, and host port are
 installation-specific.
+The archived image smoke used a read-only `/data` model-pack mount; its `serve.server` entrypoint did not run the
+source tree's setup script. To use serial batch-MTP with a compatible model, its config must include that model's
+MTP data and engine arguments such as `--batch-mtp --spec 4`; adjust batch and KV settings to available memory.
 
 ```bash
 export GPU0_RENDER=/dev/dri/renderDXXX
