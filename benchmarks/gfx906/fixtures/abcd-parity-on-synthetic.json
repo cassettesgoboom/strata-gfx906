@@ -1,0 +1,51 @@
+{
+  "trace_kind": "native_commit_trace",
+  "mode": "abcd_on",
+  "provenance": {
+    "synthetic": true,
+    "source_commit": "synthetic-commit",
+    "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "model_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "tokenizer_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "mtp_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+    "command_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+    "device_and_runtime": "synthetic-device-runtime",
+    "trace_capture_method": "synthetic-fixture-only"
+  },
+  "occupancy": {
+    "offered_lanes": 2,
+    "active_peak": 2,
+    "device_overlap_proven": false
+  },
+  "requests": [
+    {
+      "request_id": "r-01",
+      "cache_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "cache_reused_tokens": 128,
+      "cache_fresh_tokens": 16,
+      "commits": [
+        {
+          "commit_index": 0,
+          "native_token_id": 900,
+          "mtp_offered_token_ids": [
+            900,
+            901
+          ],
+          "mtp_accepted_token_ids": [
+            900
+          ],
+          "gdn_state_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "recurrent_state_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        {
+          "commit_index": 1,
+          "native_token_id": 902,
+          "mtp_offered_token_ids": [],
+          "mtp_accepted_token_ids": [],
+          "gdn_state_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "recurrent_state_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      ]
+    }
+  ]
+}
