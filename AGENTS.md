@@ -34,3 +34,13 @@ offers the same steps as tools.
   [docs/COMMUNITY_BENCHMARKS.md](docs/COMMUNITY_BENCHMARKS.md), compare against a same-day run of the build you are
   testing, and say what you did not test.
 - Open test requests and the hardware that is wanted are listed in [docs/TEST_REQUESTS.md](docs/TEST_REQUESTS.md).
+
+## gfx906 fork work
+
+For gfx906-specific build steps and the current validation boundary, start at
+[docs/gfx906/START-HERE.md](docs/gfx906/START-HERE.md). Treat this fork's notes as scoped to the revisions and
+evidence they name; upstream documentation and historical benchmark reports do not prove a rebuild or current GPU
+behavior. Keep opt-in experiments opt-in, record the exact source and artifact identities, and mark correctness,
+state parity, and performance claims separately. Follow the conditional workflows in
+[`.agents/skills/`](.agents/skills/) only when the task calls for them; they do not imply that GPU hardware or a
+publisher is available.

@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "run_id": "synthetic-fixture-never-a-gpu-result",
+  "provenance": {"repository": "fixture-only", "commit": "296b59d2", "engine_version": "fixture", "source": "synthetic", "build_id": "none", "command": "not executed", "synthetic": true},
+  "hardware": {"gpu_model": "fixture only", "architecture": "gfx906", "rocm_version": "none", "vram_gib": 1, "ram_gib": 1},
+  "workload": {"model": "fixture", "quant": "fixture", "mode": "fixture", "context_tokens": 1, "prompt_tokens": 1, "output_tokens": 1, "batch": 1},
+  "outcome": {"category": "correctness", "status": "NOT_RUN", "output_complete": false, "cache_state": "unknown", "actual_output_tokens": 0, "finish_reason": "error", "category_statuses": {"capacity": "NOT_RUN", "performance": "NOT_RUN", "correctness": "NOT_RUN"}},
+  "measurements": {"fixture": {"value": 0, "unit": "count"}}
+}
