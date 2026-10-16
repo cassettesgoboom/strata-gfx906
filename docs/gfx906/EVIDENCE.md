@@ -24,6 +24,16 @@ The [2026-10-16 machine-readable receipt](../../benchmarks/gfx906/receipts/2026-
 
 The pre-merge source-equivalent binary and server were mounted into the archived runtime image for this smoke. The published image still contains the archived binary. No rebuild or GPU smoke is recorded for post-merge main at the 2026-10-17 checkpoint (audited checkpoint SHA `73e01b3a5f1c577899e3f668e7e913759a1f7455`). These short serial requests do not measure sustained multi-agent throughput, validate AB/CD, or prove exact native-token or recurrent-state parity. They must not be pooled with the historical benchmark table above.
 
+## PR #22 one-window verifier refactor build
+
+[PR #22](https://github.com/cassettesgoboom/strata-gfx906/pull/22) merged the mechanical refactor that groups
+existing single-window verifier state into `Verifier::WindowContext`. Its source commit
+`22cae852bbbe433c1cdf65ab4daaef7bfeaf650d` passed an isolated gfx906 HIP Release/Ninja `strata` build; the
+resulting native binary SHA-256 is `cb7f37249a34b7e8d24232f4e57da9a035c473d5bd598e83b53bad8d781c8db2`,
+and its `--help` path loaded. The 44-test CPU suite and both hosted CPU checks passed. This is compile and CLI
+evidence only: no GPU runtime test or inference, no two-slice AB/CD isolation, no native-token or recurrent-state
+parity, and no new image publication were performed. The PR comment contains the sanitized build receipt.
+
 ## CPU-only AB/CD trace comparator
 
 [PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds a CPU-only comparator for supplied serial-OFF and AB/CD-ON native commit traces, with synthetic fixtures and fail-closed tests. The current v2 contract compares ordered native token IDs per committed window and persistent-state hashes at the end of that window; it also checks matched provenance and inputs, cache history, commit boundaries, and MTP decisions. Its output always sets `runtime_parity_claim` to `false`: matching JSON proves only that the supplied traces compare equal. It does not authenticate trace capture, establish runtime parity, run a model, validate GPU behavior, or port AB/CD to current main. See [the v2 contract](../../benchmarks/gfx906/fixtures/abcd-parity-contract-v2.json). V1 traces require regeneration or a migration justified by original transaction-boundary evidence.
