@@ -17,7 +17,9 @@
     "cache_key_sha256",
     "cache_reused_tokens",
     "cache_fresh_tokens",
-    "commits"
+    "commits",
+    "input_token_ids_sha256",
+    "sampler_state_sha256"
   ],
   "required_per_commit_fields": [
     "commit_index",
@@ -29,19 +31,36 @@
   ],
   "comparison": {
     "boundary": "Each serialized committed request step after the same scheduler transaction has committed; compare matching request_id and commit_index.",
-    "first_divergence_order": ["request_id ascending", "commit_index ascending", "fields in required_per_commit_fields order"],
+    "first_divergence_order": [
+      "request order as supplied (must match exactly)",
+      "commit_index ascending",
+      "fields in required_per_commit_fields order"
+    ],
     "token_ids": "Exact integer equality. Compare native token IDs before detokenization, streaming, or HTTP serialization.",
     "mtp": "Exact ordered equality of offered and accepted token ID sequences at each commit; include empty sequences when no proposal is offered/accepted.",
     "cache": "Exact equality of cache key and native reused/fresh token counts per request; use identical prior turn history and prove reuse from native counters.",
-    "persistent_state": "Hash canonical serialized bytes of every persistent per-layer GDN and other recurrent state at the same commit boundary. Hash algorithm SHA-256; serialization must identify layer, tensor shape, dtype, and byte order. If canonical bytes cannot be exposed, record per-tensor max absolute and relative error with a predeclared tolerance; this is numeric state parity, not bitwise parity.",
+    "persistent_state": "Require lowercase 64-character SHA-256 digests over canonical serialized bytes of every persistent per-layer GDN and other recurrent state at each same commit boundary. Serialization must identify layer, tensor shape, dtype, and byte order. If canonical bytes cannot be captured, state parity is unproven and this comparator must fail closed; numeric tolerance fallback is not supported.",
     "occupancy": "Record offered/active lanes and device-side window intervals per request. Occupancy is an execution observation, not a parity field; claim overlap only when native counters and device timing show concurrent active work.",
-    "request_ids": "Require unique stable IDs and a one-to-one set match across both traces."
+    "request_ids": "Require unique stable IDs and identical request order across traces.",
+    "commit_indices": "Require each request trace to contain ordered, zero-based, contiguous commit_index values; gaps, negative indices, and reordered commits invalidate the trace.",
+    "inputs_and_sampling": "Require matching SHA-256 hashes of native input token IDs and sampler state for each request.",
+    "provenance_hashes": "Require lowercase 64-character SHA-256 hex for binary, model, tokenizer, MTP, and normalized command identities. The normalized command identity includes all inputs and options except the OFF versus ON feature toggle; require that hash to match."
   },
-  "minimum_trace_provenance": ["source_commit", "binary_sha256", "model_sha256", "tokenizer_sha256", "mtp_sha256", "command_sha256", "device_and_runtime", "trace_capture_method"],
+  "minimum_trace_provenance": [
+    "source_commit",
+    "binary_sha256",
+    "model_sha256",
+    "tokenizer_sha256",
+    "mtp_sha256",
+    "command_sha256",
+    "device_and_runtime",
+    "trace_capture_method"
+  ],
   "limitations": [
     "Synthetic fixtures validate comparator behavior only; they are not model output or GPU evidence.",
     "Host/API text, throughput, successful completion, and summed lane rates do not establish native token or persistent-state parity.",
     "A final-output match does not replace checking every commit boundary through the first divergence."
   ],
-  "cpu_check": "python3 tests/gfx906/test_abcd_parity.py"
+  "cpu_check": "python3 tests/gfx906/test_abcd_parity.py",
+  "limitation_addendum": "The tool reports synthetic_contract_only=true and runtime_parity_claim=false whenever either input provenance is synthetic; synthetic equality is never runtime evidence."
 }

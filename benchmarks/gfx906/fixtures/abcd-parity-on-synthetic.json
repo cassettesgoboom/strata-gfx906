@@ -45,7 +45,9 @@
           "gdn_state_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
           "recurrent_state_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
         }
-      ]
+      ],
+      "input_token_ids_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+      "sampler_state_sha256": "6666666666666666666666666666666666666666666666666666666666666666"
     }
   ]
 }

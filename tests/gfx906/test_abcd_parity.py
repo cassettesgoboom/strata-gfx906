@@ -20,6 +20,8 @@ class AbcdParityTests(unittest.TestCase):
     def test_matching_fixture_passes_and_occupancy_is_not_parity(self):
         result = abcd_parity.compare(self.serial, self.abcd)
         self.assertTrue(result["equal"], result)
+        self.assertTrue(result["synthetic_contract_only"])
+        self.assertFalse(result["runtime_parity_claim"])
         self.assertFalse(result["occupancy"]["compared_for_parity"])
         self.assertNotEqual(result["occupancy"]["serial"], result["occupancy"]["abcd"])
 
@@ -53,6 +55,68 @@ class AbcdParityTests(unittest.TestCase):
         changed = deepcopy(self.abcd)
         del changed["requests"][0]["commits"][1]["recurrent_state_sha256"]
         self.assertIn("missing recurrent_state_sha256", abcd_parity.compare(self.serial, changed)["first_divergence"])
+
+    def test_cache_fields_are_required_even_when_missing_from_both_runs(self):
+        serial = deepcopy(self.serial)
+        abcd = deepcopy(self.abcd)
+        for run in (serial, abcd):
+            for field in ("cache_key_sha256", "cache_reused_tokens", "cache_fresh_tokens"):
+                del run["requests"][0][field]
+        self.assertIn("cache_key_sha256", abcd_parity.compare(serial, abcd)["first_divergence"])
+
+    def test_sha256_placeholders_and_malformed_provenance_fail_closed(self):
+        for location, field in (("request", "cache_key_sha256"), ("commit", "gdn_state_sha256"),
+                                ("provenance", "binary_sha256"), ("provenance", "command_sha256")):
+            with self.subTest(location=location, field=field):
+                changed = deepcopy(self.abcd)
+                if location == "request":
+                    changed["requests"][0][field] = "not-a-hash"
+                elif location == "commit":
+                    changed["requests"][0]["commits"][0][field] = "placeholder"
+                else:
+                    changed["provenance"][field] = "placeholder"
+                self.assertIn("SHA-256", abcd_parity.compare(self.serial, changed)["first_divergence"])
+
+    def test_command_hash_and_input_sampler_identity_must_match(self):
+        changed = deepcopy(self.abcd)
+        changed["provenance"]["command_sha256"] = "7" * 64
+        self.assertEqual(abcd_parity.compare(self.serial, changed)["first_divergence"], "provenance.command_sha256 differs")
+        for field in ("input_token_ids_sha256", "sampler_state_sha256"):
+            changed = deepcopy(self.abcd)
+            changed["requests"][0][field] = "7" * 64
+            self.assertIn(field + " differs", abcd_parity.compare(self.serial, changed)["first_divergence"])
+
+    def test_request_order_must_match(self):
+        serial = deepcopy(self.serial)
+        abcd = deepcopy(self.abcd)
+        for run in (serial, abcd):
+            second = deepcopy(run["requests"][0])
+            second["request_id"] = "r-02"
+            run["requests"].append(second)
+        abcd["requests"].reverse()
+        self.assertEqual(abcd_parity.compare(serial, abcd)["first_divergence"], "request_ids differ")
+
+    def test_commit_indices_must_be_ordered_zero_based_and_contiguous(self):
+        for indices in ((9, 10), (-1, 0), (0, 2), (1, 0)):
+            with self.subTest(indices=indices):
+                changed = deepcopy(self.abcd)
+                for step, index in zip(changed["requests"][0]["commits"], indices):
+                    step["commit_index"] = index
+                reason = abcd_parity.compare(self.serial, changed)["first_divergence"]
+                self.assertTrue("commit_index" in reason or "ordered, zero-based, and contiguous" in reason)
+
+    def test_token_fields_reject_wrong_types_and_booleans(self):
+        mutations = (
+            ("native_token_id", True),
+            ("native_token_id", "900"),
+            ("mtp_offered_token_ids", [True]),
+            ("mtp_accepted_token_ids", "[900]"),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field, value=value):
+                changed = deepcopy(self.abcd)
+                changed["requests"][0]["commits"][0][field] = value
+                self.assertFalse(abcd_parity.compare(self.serial, changed)["equal"])
 
 
 if __name__ == "__main__":

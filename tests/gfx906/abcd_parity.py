@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -27,8 +28,15 @@ PROVENANCE_FIELDS = (
 )
 MATCHED_PROVENANCE_FIELDS = (
     "source_commit", "binary_sha256", "model_sha256", "tokenizer_sha256",
-    "mtp_sha256", "device_and_runtime",
+    "mtp_sha256", "command_sha256", "device_and_runtime",
 )
+SHA256_FIELDS = {
+    "binary_sha256", "model_sha256", "tokenizer_sha256", "mtp_sha256", "command_sha256",
+}
+
+
+def _is_sha256(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -49,22 +57,45 @@ def _index_run(run: dict[str, Any], label: str) -> tuple[dict[str, dict[str, Any
         if not isinstance(req, dict) or not isinstance(req.get("request_id"), str):
             return {}, f"{label}: every request needs a string request_id"
         rid = req["request_id"]
+        if not rid:
+            return {}, f"{label}: request_id must not be empty"
         if rid in indexed:
             return {}, f"{label}: duplicate request_id {rid}"
+        for field in ("cache_key_sha256", "input_token_ids_sha256", "sampler_state_sha256"):
+            if not _is_sha256(req.get(field)):
+                return {}, f"{label}: {rid}: {field} must be a lowercase SHA-256 hex digest"
+        for field in ("cache_reused_tokens", "cache_fresh_tokens"):
+            if type(req.get(field)) is not int or req[field] < 0:
+                return {}, f"{label}: {rid}: {field} must be a non-negative integer"
         steps = req.get("commits")
         if not isinstance(steps, list) or not steps:
             return {}, f"{label}: {rid}: commits must be a non-empty list"
         by_boundary: dict[int, dict[str, Any]] = {}
+        seen_boundaries: list[int] = []
         for step in steps:
             if not isinstance(step, dict) or type(step.get("commit_index")) is not int:
                 return {}, f"{label}: {rid}: commit needs integer commit_index"
             boundary = step["commit_index"]
+            if boundary < 0:
+                return {}, f"{label}: {rid}: commit_index must be non-negative"
             if boundary in by_boundary:
                 return {}, f"{label}: {rid}: duplicate commit_index {boundary}"
             for field in PARITY_FIELDS:
                 if field not in step:
                     return {}, f"{label}: {rid} commit {boundary}: missing {field}"
+            if type(step["native_token_id"]) is not int or step["native_token_id"] < 0:
+                return {}, f"{label}: {rid} commit {boundary}: native_token_id must be a non-negative integer"
+            for field in ("mtp_offered_token_ids", "mtp_accepted_token_ids"):
+                ids = step[field]
+                if not isinstance(ids, list) or any(type(token_id) is not int or token_id < 0 for token_id in ids):
+                    return {}, f"{label}: {rid} commit {boundary}: {field} must be a list of non-negative integer token IDs"
+            for field in ("gdn_state_sha256", "recurrent_state_sha256"):
+                if not _is_sha256(step[field]):
+                    return {}, f"{label}: {rid} commit {boundary}: {field} must be a lowercase SHA-256 hex digest"
             by_boundary[boundary] = step
+            seen_boundaries.append(boundary)
+        if seen_boundaries != list(range(len(steps))):
+            return {}, f"{label}: {rid}: commit_index values must be ordered, zero-based, and contiguous"
         req_copy = dict(req)
         req_copy["_commits"] = by_boundary
         indexed[rid] = req_copy
@@ -84,6 +115,8 @@ def compare(serial: dict[str, Any], abcd: dict[str, Any]) -> dict[str, Any]:
         for field in PROVENANCE_FIELDS:
             if not isinstance(provenance.get(field), str) or not provenance[field]:
                 return {"equal": False, "first_divergence": f"{label}: provenance.{field} is required"}
+            if field in SHA256_FIELDS and not _is_sha256(provenance[field]):
+                return {"equal": False, "first_divergence": f"{label}: provenance.{field} must be a lowercase SHA-256 hex digest"}
     for field in MATCHED_PROVENANCE_FIELDS:
         if serial["provenance"][field] != abcd["provenance"][field]:
             return {"equal": False, "first_divergence": f"provenance.{field} differs"}
@@ -94,12 +127,13 @@ def compare(serial: dict[str, Any], abcd: dict[str, Any]) -> dict[str, Any]:
     if err:
         return {"equal": False, "first_divergence": err}
 
-    if set(left) != set(right):
+    if list(left) != list(right):
         return {"equal": False, "first_divergence": "request_ids differ"}
-    for rid in sorted(left):
+    for rid in left:
         a, b = left[rid], right[rid]
-        for field in ("cache_key_sha256", "cache_reused_tokens", "cache_fresh_tokens"):
-            if a.get(field) != b.get(field):
+        for field in ("cache_key_sha256", "cache_reused_tokens", "cache_fresh_tokens",
+                      "input_token_ids_sha256", "sampler_state_sha256"):
+            if a[field] != b[field]:
                 return {"equal": False, "first_divergence": f"request {rid}: {field} differs"}
         ca, cb = a["_commits"], b["_commits"]
         if set(ca) != set(cb):
@@ -112,6 +146,8 @@ def compare(serial: dict[str, Any], abcd: dict[str, Any]) -> dict[str, Any]:
                             f"request {rid} commit {boundary}: {field} differs"}
     return {
         "equal": True,
+        "synthetic_contract_only": bool(serial["provenance"].get("synthetic") or abcd["provenance"].get("synthetic")),
+        "runtime_parity_claim": not bool(serial["provenance"].get("synthetic") or abcd["provenance"].get("synthetic")),
         "first_divergence": None,
         "occupancy": {
             "serial": serial.get("occupancy"),
