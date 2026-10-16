@@ -8,6 +8,11 @@ tokenizer/pack, and model-specific data externally. Hardware memory needs depend
 The **published digest** has entrypoint `python3 -m serve.server` and accepts the trailing server arguments below;
 the inherited upstream source Dockerfile uses a different entrypoint. This example applies to the published digest,
 not to an image built from the current source.
+Do not substitute a locally built image for the pinned digest in this command: the source image runs
+`docker-entrypoint.sh`, which creates `/data/config`, performs model setup using environment variables such as
+`FAMILY` and `MODEL`, and then starts `setup.py`. It does not forward these trailing `serve.server` arguments. That
+source-image flow needs writable `/data` and its own setup configuration; this example instead uses the published
+image's server entrypoint with an already-prepared external config and read-only model data.
 
 ## Pull
 
