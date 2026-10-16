@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
@@ -30,7 +32,10 @@ jobs:
         run: python tools/gfx906.py test-cpu
       - name: Validate synthetic fixture is rejected as run evidence
         run: |
-          if python tools/gfx906.py bench-validate tests/gfx906/fixtures/synthetic-not-run.json; then
-            echo 'synthetic fixture was incorrectly accepted' >&2
-            exit 1
-          fi
+          set +e
+          output="$(python tools/gfx906.py bench-validate tests/gfx906/fixtures/synthetic-not-run.json 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          test "$status" -eq 1
+          test "$output" = $'INVALID: tests/gfx906/fixtures/synthetic-not-run.json\n  - synthetic fixture cannot be reported as run evidence'
