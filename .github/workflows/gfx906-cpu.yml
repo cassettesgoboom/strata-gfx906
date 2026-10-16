@@ -3,6 +3,7 @@ name: gfx906 CPU tooling
 on:
   push:
     paths:
+      - 'README.md'
       - 'tools/gfx906.py'
       - 'tests/gfx906/**'
       - 'benchmarks/gfx906/**'
@@ -10,6 +11,7 @@ on:
       - '.github/workflows/gfx906-cpu.yml'
   pull_request:
     paths:
+      - 'README.md'
       - 'tools/gfx906.py'
       - 'tests/gfx906/**'
       - 'benchmarks/gfx906/**'
