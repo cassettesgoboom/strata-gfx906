@@ -19,6 +19,9 @@ Radeon VII): wave64, built from source.” It uses CMake with `-DSTRATA_HIP_GFX9
 with Ninja. Read that section for prerequisites and runtime device requirements. This is an inherited recipe, not a
 rebuild result for the fork's present source revision.
 
+The [container guide](CONTAINER.md) shows the archived digest-pinned runtime with external model mounts and
+experimental AB/CD kept off by default.
+
 ## Evidence boundary
 
 The exact source base, archived native binary SHA-256, OCI index digest, and historical AB/CD throughput scope are
@@ -31,9 +34,12 @@ Historical measurements are not evidence for the present source.
 
 ## Checked-in CLI
 
-The planned gfx906 command entry point is [`tools/gfx906.py`](../../tools/gfx906.py). Once integrated, its
-`doctor`, `test-cpu`, `bench-validate`, and `report` subcommands are the portable entry points for diagnostics,
-CPU-only checks, archived benchmark validation, and report generation. They do not establish GPU validation.
+The checked-in gfx906 command entry point is [`tools/gfx906.py`](../../tools/gfx906.py). Run
+`python tools/gfx906.py doctor` and `python tools/gfx906.py test-cpu` without a GPU. The `build-gfx906` and
+`bench-p2`/`bench-p3`/`bench-p4` commands print dry-run plans by default; their `--apply` modes require explicit
+inputs. `bench-validate` checks the structure of a versioned evidence record, and `report` renders one. The HTTP
+load commands do not establish native decode occupancy or a cached strict-overlap benchmark.
+The [benchmark format guide](../../benchmarks/gfx906/README.md) explains the required raw-evidence review.
 
 ## Conditional workflows
 
