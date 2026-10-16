@@ -5,10 +5,29 @@ This note maps gfx906-relevant features to public upstream commits observed on 2
 ## Public fork updates
 
 - [PR #11](https://github.com/cassettesgoboom/strata-gfx906/pull/11) adds the README's archived dual-MI50 cached multi-agent measurement table and links the canonical evidence and provenance. It changes documentation only; the archived image and engine are unchanged.
-- [PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds a CPU-only comparator contract for supplied serial-OFF / AB/CD-ON native commit traces, synthetic fixtures, and negative tests. It is trace comparison tooling only: output always states `runtime_parity_claim=false`, it cannot authenticate trace capture, and it does not establish runtime token/state parity. It does not port AB/CD to current main or change the image.
+- [PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) introduced a CPU-only comparator for supplied
+  serial-OFF / AB/CD-ON native traces. Its v1 singular-token record format is superseded by
+  [PR #17](https://github.com/cassettesgoboom/strata-gfx906/pull/17), which uses `native_transaction_trace_v2`:
+  ordered native token-ID vectors per committed transaction/window and persistent-state hashes only at window end.
+  V1 records are rejected unless regenerated or migrated with original transaction-boundary evidence. The
+  comparator output always states `runtime_parity_claim=false`; it cannot authenticate capture or establish runtime
+  token/state parity, and does not port AB/CD or change the image.
 - [PR #15](https://github.com/cassettesgoboom/strata-gfx906/pull/15) adds an unused host-side transaction lifecycle registry and focused C++ CPU test for slice ownership, snapshots, registry-bound handles, lifecycle transitions, accepted-prefix limits, and drain-before-reuse. Hosted CI passed 42 Python CPU tests and the C++20 transaction test. The registry is not integrated with the verifier or scheduler; this scaffolding does not prove GPU overlap, device completion/drain, or runtime token/state parity and does not change the image.
+- [PR #17](https://github.com/cassettesgoboom/strata-gfx906/pull/17) updates the comparator and synthetic fixtures
+  to v2 transaction-window token vectors and window-end state comparison. The current
+  `python tools/gfx906.py test-cpu` suite passes 44 CPU tests. This remains a comparison contract, not runtime evidence.
 
-These fork PRs document archived evidence and add CPU-side future-validation scaffolding. They do not alter the upstream feature history below or supply new source-to-image provenance. The [next source gate in Issue #1](https://github.com/cassettesgoboom/strata-gfx906/issues/1) is current-main verifier/scheduler integration with per-slice graph, staging, and poll ownership; device work must drain before buffers are reused and persistent state must commit only for accepted prefixes. Follow with a pinned current-main build and isolated serial-versus-AB/CD GPU native-token and recurrent-state parity checks. Keep the path opt-in until those runtime checks pass.
+These fork PRs document archived evidence and add CPU-side future-validation scaffolding. They do not alter the
+upstream feature history below or supply new source-to-image provenance. The
+[current-main blockers in Issue #1](https://github.com/cassettesgoboom/strata-gfx906/issues/1) remain: the lifecycle
+registry is not wired into `Verifier` or the scheduler; per-slice graph, staging, and poll ownership is not
+integrated; safe drain-before-reuse is not established; and accepted-prefix-only persistent-state commit is not
+established. Ordinary rejection restores the QSA tail and re-appends accepted keys, but it is not general rollback
+for failed or aborted same-session overlapping slices: indexer appends also mutate dead, pooled, and block-position
+state, and GDN commit mutates persistent recurrence state in place. This rollback gap also needs resolution and tests.
+The next source gate is to implement those guarantees, then use a pinned current-main build for isolated
+serial-versus-AB/CD GPU checks of ordered native token IDs and state hashes at matching window ends. Keep AB/CD
+opt-in until those runtime checks pass.
 
 ## Feature-to-commit map
 
