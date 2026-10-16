@@ -193,6 +193,7 @@ public:
             rec->accepted_by_slot[(size_t) rec->snapshot.slots[(size_t) first]] = keep;
         }
         rec->state = State::Committing;
+        rec->drained = false;
         return true;
     }
 
@@ -205,6 +206,7 @@ public:
             return reject(err, "batch transaction commit result requires its live committing handle");
         if (succeeded) {
             rec->state = State::Committed;
+            rec->drained = true;
             return true;
         }
         rec->state = State::Failed;

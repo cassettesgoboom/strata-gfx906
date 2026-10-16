@@ -79,10 +79,12 @@ int main() {
     check(registry.begin_commit(cd, keep_cd, err) &&
           registry.state(cd) == BatchTransactionRegistry::State::Committing,
           "later-group valid prefixes enter commit-in-progress");
+    check(!registry.drained(cd), "device commit in progress is not marked drained");
     check(!registry.retire(cd, err), "commit intent cannot retire before device completion");
     check(registry.finish_commit(cd, true, err) &&
           registry.state(cd) == BatchTransactionRegistry::State::Committed,
           "successful device commit completion enters committed state");
+    check(registry.drained(cd), "successful device commit completion marks work drained");
     check(registry.retire(cd, err) && registry.state(ab) == BatchTransactionRegistry::State::Prepared,
           "CD retirement leaves AB slice ownership intact");
     const int alias_slots[] = {0, 0};
@@ -114,8 +116,10 @@ int main() {
     check(registry.begin_commit(ab, keep, err), "valid per-slot accepted prefixes enter commit-in-progress");
     check(registry.state(ab) == BatchTransactionRegistry::State::Committing,
           "registry does not report committed before device completion");
+    check(!registry.drained(ab), "commit-in-progress remains undrained");
     check(!registry.begin_commit(ab, keep, err), "duplicate commit intent is rejected");
     check(registry.finish_commit(ab, true, err), "successful device commit finishes");
+    check(registry.drained(ab), "successful commit is drained only after completion");
     check(!registry.begin_commit(ab, keep, err), "duplicate commit after success is rejected");
     check(!prepare(registry, 3, 0, ab_slots, ab_tokens, ab_positions, 4, duplicate),
           "committed slice stays owned until retirement");
@@ -164,6 +168,7 @@ int main() {
     check(registry.finish_commit(failed_commit, false, err) &&
           registry.state(failed_commit) == BatchTransactionRegistry::State::Failed,
           "failed device commit enters failed state, never committed");
+    check(!registry.drained(failed_commit), "failed device commit remains undrained");
     check(!registry.retire(failed_commit, err), "failed commit cannot retire before drain");
     check(registry.mark_drained(failed_commit, err), "failed commit requires explicit device drain");
     check(!registry.retire(failed_commit, err), "failed commit drain does not imply state recovery");
