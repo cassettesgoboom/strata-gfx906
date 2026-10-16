@@ -6,12 +6,14 @@ on:
       - 'tools/gfx906.py'
       - 'tests/gfx906/**'
       - 'benchmarks/gfx906/**'
+      - 'docs/gfx906/**'
       - '.github/workflows/gfx906-cpu.yml'
   pull_request:
     paths:
       - 'tools/gfx906.py'
       - 'tests/gfx906/**'
       - 'benchmarks/gfx906/**'
+      - 'docs/gfx906/**'
       - '.github/workflows/gfx906-cpu.yml'
 
 permissions:
