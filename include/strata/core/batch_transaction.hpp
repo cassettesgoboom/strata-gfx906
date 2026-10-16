@@ -49,7 +49,7 @@ private:
 /// One registry is owned by one verifier stage. Calls are expected to be serialized by its host owner.
 class BatchTransactionRegistry {
 public:
-    enum class State { Stale, Prepared, Launched, Complete, Failed, Aborted, Committed };
+    enum class State { Stale, Prepared, Launched, Complete, Committing, Failed, Aborted, Committed };
 
     BatchTransactionRegistry() : registry_id_(allocate_registry_id()) {}
     BatchTransactionRegistry(const BatchTransactionRegistry&) = delete;
@@ -142,7 +142,9 @@ public:
         Record* rec = find(handle);
         if (rec == nullptr || (rec->state != State::Prepared && rec->state != State::Launched))
             return reject(err, "batch transaction failure requires a live prepared or launched handle");
+        const bool compute_may_have_mutated_state = rec->state == State::Launched;
         rec->drained = rec->state == State::Prepared;
+        rec->recovery_required = rec->recovery_required || compute_may_have_mutated_state;
         rec->state = State::Failed;
         return true;
     }
@@ -150,9 +152,11 @@ public:
     bool abort(const BatchTransactionHandle& handle, std::string& err) {
         Record* rec = find(handle);
         if (rec == nullptr || (rec->state != State::Prepared && rec->state != State::Launched &&
-                               rec->state != State::Complete))
+                               rec->state != State::Complete && rec->state != State::Committing))
             return reject(err, "batch transaction abort requires a live uncommitted handle");
-        rec->drained = rec->drained || rec->state == State::Prepared || rec->state == State::Complete;
+        const bool work_may_have_mutated_state = rec->state != State::Prepared;
+        rec->drained = rec->state == State::Prepared || rec->state == State::Complete;
+        rec->recovery_required = rec->recovery_required || work_may_have_mutated_state;
         rec->state = State::Aborted;
         return true;
     }
@@ -167,7 +171,9 @@ public:
         return true;
     }
 
-    bool commit(const BatchTransactionHandle& handle, const int* accepted_by_slot, std::string& err) {
+    /// Validate and record accepted prefixes, then enter Committing. This is intent only: callers must
+    /// execute the device commit and call finish_commit after observing its result.
+    bool begin_commit(const BatchTransactionHandle& handle, const int* accepted_by_slot, std::string& err) {
         Record* rec = find(handle);
         if (rec == nullptr || rec->state != State::Complete || !rec->drained)
             return reject(err, "batch transaction commit requires completed and drained work");
@@ -179,9 +185,55 @@ public:
             const int keep = accepted_by_slot[rec->snapshot.slots[(size_t) first]];
             if (keep < 1 || keep > i - first)
                 return reject(err, "batch transaction accepted prefix is outside its slot group");
+        }
+        for (int i = 0; i < rec->snapshot.row_count;) {
+            const int first = i;
+            while (i < rec->snapshot.row_count && rec->snapshot.slots[(size_t) i] == rec->snapshot.slots[(size_t) first])
+                ++i;
+            const int keep = accepted_by_slot[rec->snapshot.slots[(size_t) first]];
             rec->accepted_by_slot[(size_t) rec->snapshot.slots[(size_t) first]] = keep;
         }
-        rec->state = State::Committed;
+        rec->state = State::Committing;
+        rec->drained = false;
+        return true;
+    }
+
+    /// Trust boundary: call only after the runtime observes successful completion of the selective device commit.
+    /// A failed device commit may have partially mutated session state and therefore requires both stream drain and
+    /// caller-owned recovery/discard acknowledgement before this slice can be retired.
+    bool finish_commit(const BatchTransactionHandle& handle, bool succeeded, std::string& err) {
+        Record* rec = find(handle);
+        if (rec == nullptr || rec->state != State::Committing)
+            return reject(err, "batch transaction commit result requires its live committing handle");
+        if (succeeded) {
+            rec->state = State::Committed;
+            rec->drained = true;
+            return true;
+        }
+        rec->state = State::Failed;
+        rec->drained = false;
+        rec->recovery_required = true;
+        return true;
+    }
+
+    /// Trust boundary: after a failed/aborted commit has drained, the runtime must restore the saved session state
+    /// or discard the affected session before acknowledging recovery. Drain alone does not imply rollback.
+    bool mark_recovered(const BatchTransactionHandle& handle, std::string& err) {
+        Record* rec = find(handle);
+        if (rec == nullptr || (rec->state != State::Failed && rec->state != State::Aborted) || !rec->drained ||
+            !rec->recovery_required)
+            return reject(err, "transaction recovery requires a drained failed or aborted commit");
+        rec->recovery_required = false;
+        return true;
+    }
+
+    /// Copy the registry-owned, validated accepted-prefix intent. Available only after begin_commit succeeds.
+    bool accepted_prefixes(const BatchTransactionHandle& handle,
+                           std::array<int, kBatchTransactionMaxSlots>& out, std::string& err) const {
+        const Record* rec = find(handle);
+        if (rec == nullptr || (rec->state != State::Committing && rec->state != State::Committed))
+            return reject(err, "accepted prefixes require a live committing or committed handle");
+        out = rec->accepted_by_slot;
         return true;
     }
 
@@ -189,7 +241,8 @@ public:
     bool retire(const BatchTransactionHandle& handle, std::string& err) {
         Record* rec = find(handle);
         if (rec == nullptr || (rec->state != State::Committed &&
-                               !((rec->state == State::Failed || rec->state == State::Aborted) && rec->drained)))
+                               !((rec->state == State::Failed || rec->state == State::Aborted) && rec->drained &&
+                                 !rec->recovery_required)))
             return reject(err, "batch transaction retirement requires commit or a drained failure/abort");
         *rec = Record{};
         return true;
@@ -217,6 +270,7 @@ private:
         bool active = false;
         State state = State::Stale;
         bool drained = false;
+        bool recovery_required = false;
         uint64_t id = 0;
         uint32_t handle_generation = 0;
         BatchTransactionSnapshot snapshot{};
