@@ -142,7 +142,9 @@ public:
         Record* rec = find(handle);
         if (rec == nullptr || (rec->state != State::Prepared && rec->state != State::Launched))
             return reject(err, "batch transaction failure requires a live prepared or launched handle");
+        const bool compute_may_have_mutated_state = rec->state == State::Launched;
         rec->drained = rec->state == State::Prepared;
+        rec->recovery_required = rec->recovery_required || compute_may_have_mutated_state;
         rec->state = State::Failed;
         return true;
     }
@@ -152,10 +154,9 @@ public:
         if (rec == nullptr || (rec->state != State::Prepared && rec->state != State::Launched &&
                                rec->state != State::Complete && rec->state != State::Committing))
             return reject(err, "batch transaction abort requires a live uncommitted handle");
-        const bool commit_may_have_mutated_state = rec->state == State::Committing;
-        rec->drained = rec->drained || rec->state == State::Prepared || rec->state == State::Complete;
-        if (commit_may_have_mutated_state) rec->drained = false;
-        rec->recovery_required = rec->recovery_required || commit_may_have_mutated_state;
+        const bool work_may_have_mutated_state = rec->state != State::Prepared;
+        rec->drained = rec->state == State::Prepared || rec->state == State::Complete;
+        rec->recovery_required = rec->recovery_required || work_may_have_mutated_state;
         rec->state = State::Aborted;
         return true;
     }
@@ -223,6 +224,16 @@ public:
             !rec->recovery_required)
             return reject(err, "transaction recovery requires a drained failed or aborted commit");
         rec->recovery_required = false;
+        return true;
+    }
+
+    /// Copy the registry-owned, validated accepted-prefix intent. Available only after begin_commit succeeds.
+    bool accepted_prefixes(const BatchTransactionHandle& handle,
+                           std::array<int, kBatchTransactionMaxSlots>& out, std::string& err) const {
+        const Record* rec = find(handle);
+        if (rec == nullptr || (rec->state != State::Committing && rec->state != State::Committed))
+            return reject(err, "accepted prefixes require a live committing or committed handle");
+        out = rec->accepted_by_slot;
         return true;
     }
 

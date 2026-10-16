@@ -80,11 +80,20 @@ int main() {
           registry.state(cd) == BatchTransactionRegistry::State::Committing,
           "later-group valid prefixes enter commit-in-progress");
     check(!registry.drained(cd), "device commit in progress is not marked drained");
+    std::array<int, strata::core::kBatchTransactionMaxSlots> registered_keep{};
+    check(registry.accepted_prefixes(cd, registered_keep, err) && registered_keep[2] == 2 && registered_keep[3] == 1,
+          "validated accepted-prefix intent is readable while committing");
+    keep_cd[2] = 1;
+    keep_cd[3] = 4;
+    check(registry.accepted_prefixes(cd, registered_keep, err) && registered_keep[2] == 2 && registered_keep[3] == 1,
+          "caller mutation cannot change registry-owned accepted-prefix intent");
     check(!registry.retire(cd, err), "commit intent cannot retire before device completion");
     check(registry.finish_commit(cd, true, err) &&
           registry.state(cd) == BatchTransactionRegistry::State::Committed,
           "successful device commit completion enters committed state");
     check(registry.drained(cd), "successful device commit completion marks work drained");
+    check(registry.accepted_prefixes(cd, registered_keep, err) && registered_keep[2] == 2 && registered_keep[3] == 1,
+          "committed handle retains its accepted-prefix intent");
     check(registry.retire(cd, err) && registry.state(ab) == BatchTransactionRegistry::State::Prepared,
           "CD retirement leaves AB slice ownership intact");
     const int alias_slots[] = {0, 0};
@@ -135,8 +144,11 @@ int main() {
     check(!registry.retire(replacement, err), "aborted launched work cannot retire before drain");
     check(!prepare(registry, 3, 0, ab_slots, ab_tokens, ab_positions, 4, duplicate),
           "aborted slice cannot be reused before drain");
+    check(!registry.mark_recovered(replacement, err), "launched abort cannot be recovered before drain");
     check(registry.mark_drained(replacement, err), "abort becomes reusable only after explicit drain");
-    check(registry.retire(replacement, err), "drained abort retires");
+    check(!registry.retire(replacement, err), "drained launched abort still requires session recovery");
+    check(registry.mark_recovered(replacement, err), "launched abort requires recovery or session discard");
+    check(registry.retire(replacement, err), "drained and recovered abort retires");
 
     BatchTransactionHandle aborted_commit;
     check(prepare(registry, 31, 0, ab_slots, ab_tokens, ab_positions, 4, aborted_commit),
@@ -157,7 +169,11 @@ int main() {
     check(registry.mark_launched(failed, err), "failure-path transaction launches");
     check(registry.mark_failed(failed, err), "launched transaction enters failed state");
     check(!registry.retire(failed, err), "failed launched work cannot retire before drain");
-    check(registry.mark_drained(failed, err) && registry.retire(failed, err), "drained failure retires");
+    check(!registry.mark_recovered(failed, err), "launched failure cannot be recovered before drain");
+    check(registry.mark_drained(failed, err), "launched failure requires explicit device drain");
+    check(!registry.retire(failed, err), "drained launched failure still requires session recovery");
+    check(registry.mark_recovered(failed, err), "launched failure requires recovery or session discard");
+    check(registry.retire(failed, err), "drained and recovered launched failure retires");
 
     BatchTransactionHandle failed_commit;
     check(prepare(registry, 41, 0, ab_slots, ab_tokens, ab_positions, 4, failed_commit),
