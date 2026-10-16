@@ -1,7 +1,7 @@
 # gfx906 fork: start here
 
 This is the entry point for the experimental Strata gfx906 (wave64) fork. It describes the public, checked-in
-starting point; it is not evidence that the current source rebuilds or runs on a GPU.
+starting point. The exact build and limited GPU smoke evidence are indexed in [current state](CURRENT-STATE.md).
 
 ## Start with these pages
 
@@ -29,10 +29,10 @@ The exact source base, archived native binary SHA-256, OCI index digest, and his
 listed in [CURRENT-STATE.md](CURRENT-STATE.md) and [EVIDENCE.md](EVIDENCE.md). The archived figures are tied to that
 binary and the public dual-MI50 32 GB / K8-V4 configuration; they do not validate the current source.
 
-There is no GPU validation of upstream v0.1.44.1 in the current source state. The archived AB/CD opt-in delta is not
-yet ported here, and its token/state parity remains open. Use exact source and artifact identities in any new report,
-and label compile-only results as such.
-Historical measurements are not evidence for the present source.
+A current-main-equivalent binary has passed a short serial dual-MI50 GPU smoke with a cached continuation; see the
+[separate receipt](../../benchmarks/gfx906/receipts/2026-10-16-current-main-gpu-smoke.json). The archived AB/CD opt-in
+delta is not integrated into current main, and token/state parity remains open. Use exact source and artifact
+identities in any new report. Historical throughput measurements are not evidence for the present source.
 
 ## Checked-in CLI
 
