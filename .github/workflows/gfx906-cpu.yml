@@ -1,0 +1,36 @@
+name: gfx906 CPU tooling
+
+on:
+  push:
+    paths:
+      - 'tools/gfx906.py'
+      - 'tests/gfx906/**'
+      - 'benchmarks/gfx906/**'
+      - '.github/workflows/gfx906-cpu.yml'
+  pull_request:
+    paths:
+      - 'tools/gfx906.py'
+      - 'tests/gfx906/**'
+      - 'benchmarks/gfx906/**'
+      - '.github/workflows/gfx906-cpu.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: CPU-only tests
+        run: python tools/gfx906.py test-cpu
+      - name: Validate synthetic fixture is rejected as run evidence
+        run: |
+          if python tools/gfx906.py bench-validate tests/gfx906/fixtures/synthetic-not-run.json; then
+            echo 'synthetic fixture was incorrectly accepted' >&2
+            exit 1
+          fi
