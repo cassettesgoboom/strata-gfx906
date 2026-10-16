@@ -482,7 +482,7 @@ void Verifier::diag(std::FILE* f) const {
     const bool current = where != nullptr && std::strncmp(where, "verify window", 13) == 0;
     std::fprintf(f, "  verify window%s: %d tokens at position %lld, host at layer step %u; the GPU rang %u; flags: "
                     "served %u, plan (A) %u, copies (B) %u\n", current ? "" : " (last window, not the current stage)",
-                 last_t_, (long long) last_pos0_, cur_layer_ + 1, rd(h_seq_), rd(h_flag_), rd(h_flagA_), rd(h_flagB_));
+                 window_.row_count, (long long) last_pos0_, cur_layer_ + 1, rd(h_seq_), rd(h_flag_), rd(h_flagA_), rd(h_flagB_));
     trace_dump(f);   // #649: STRATA_VERIFY_TRACE=1 only
 }
 
@@ -2160,9 +2160,9 @@ void Verifier::stage_inputs(int T, const int32_t* tokens, int64_t pos0) {
     *(volatile uint32_t*) h_flagA_ = 0;
     *(volatile uint32_t*) h_flagB_ = 0;
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    last_t_ = T;
+    window_.row_count = T;
     last_pos0_ = pos0;
-    for (int t = 0; t < T; ++t) last_tokens_[t] = tokens[t];
+    for (int t = 0; t < T; ++t) window_.tokens[t] = tokens[t];
     staged_ = true;
 }
 
@@ -2241,7 +2241,7 @@ bool Verifier::run(int T, const int32_t* tokens, int64_t pos0, PoolMultiFn pool,
 #endif
     using namespace strata::kernels;
     const OnDevice on_device(device_);
-    last_batch_ = false;
+    window_.is_batch = false;
     if (T < 1 || T > max_t_) { err = "verify: window size out of range"; return false; }
     if (released_.load()) { err = "verify: an earlier window never finished on the GPU (#267); restart the engine"; return false; }
     const ModelGeometry& g = *g_;
@@ -2510,7 +2510,7 @@ void Verifier::set_plan_slot(int grp) {
     sink_.ptr = (unsigned long long*) (base + ptr_off);
     sink_.ptr2 = sink_.ptr + cap;
     sink_.start2 = base + ptr_off + 4 * cap;
-    const int G = last_batch_ ? 1 : (groups_[last_t_] > 0 ? groups_[last_t_] : 1);
+    const int G = window_.is_batch ? 1 : (groups_[window_.row_count] > 0 ? groups_[window_.row_count] : 1);
     const int64_t per = G == 2 ? kStagingBlobs / 2 : kStagingBlobs;
     sink_.staging = (unsigned long long) (staging_ + (size_t) (grp * per) * strata::kernels::cpu::expert_layout().max_blob);
     sink_.staging_cap = per;
@@ -2647,12 +2647,12 @@ bool Verifier::commit(int n_keep, std::string& err) {
     return strata::metal_engine::window_commit(metal_, n_keep, err);
 #endif
     const OnDevice on_device(device_);
-    if (n_keep < 1 || n_keep > last_t_) { err = "verify: commit count out of range"; return false; }
+    if (n_keep < 1 || n_keep > window_.row_count) { err = "verify: commit count out of range"; return false; }
     const Clock::time_point t0 = Clock::now();
     h_commit_[0] = n_keep;
     h_commit_[1] = n_keep - 1;
     for (int t = 0; t < max_t_; ++t) h_commit_[2 + t] = t < n_keep ? (int32_t) (last_pos0_ + t) : -1;
-    if (last_t_ == 1 && !always_publish_ && one_token_self_commit()) {
+    if (window_.row_count == 1 && !always_publish_ && one_token_self_commit()) {
         // a one-token window has advanced the state itself (record_window): no commit graph
     } else {
         std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -2695,7 +2695,7 @@ bool Verifier::commit(int n_keep, std::string& err) {
     if (ple_stage())   // stages that share one session must advance it once
         for (int t = 0; t < n_keep; ++t) {
             ss_->ple_prev[0] = ss_->ple_prev[1];
-            ss_->ple_prev[1] = last_tokens_[t];
+            ss_->ple_prev[1] = window_.tokens[t];
         }
     ms_commit += ms_since(t0);
     return next_ == nullptr || next_->commit(n_keep, err);
@@ -3000,11 +3000,11 @@ bool Verifier::stage_batch(const int* rows, int S, int hbase, const int32_t* tok
     *(volatile uint32_t*) h_flagA_ = 0;
     *(volatile uint32_t*) h_flagB_ = 0;
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    last_t_ = S;
-    for (int t = 0; t < S; ++t) last_rows_[t] = rows[t];
+    window_.row_count = S;
+    for (int t = 0; t < S; ++t) window_.slots[t] = rows[t];
     row_base_ = hbase;   // the graphs' key (and nothing else) reads it until the next stage_batch
-    last_batch_ = true;
-    for (int t = 0; t < S; ++t) { last_tokens_[t] = tokens[t]; last_pos_b_[t] = pos[t]; }
+    window_.is_batch = true;
+    for (int t = 0; t < S; ++t) { window_.tokens[t] = tokens[t]; window_.positions[t] = pos[t]; }
     ms_host += ms_since(t0);
     return true;
 }
@@ -3050,7 +3050,7 @@ bool Verifier::run_slot_rows(const int* rows, int S, const int32_t* tokens, cons
         if (le_ < g.n_layers) return next_ == nullptr || next_->run_slot_rows(rows, S, tokens, pos, pool, next_user_, out, err);
         if (!sample_rows(S, err)) return false;
         for (int t = 0; t < S; ++t) out[t] = ((volatile int32_t*) h_out_)[t];
-        note_nonfinite(S, last_pos_b_);
+        note_nonfinite(S, window_.positions);
         progress_at("decode");
         progress_beat();
         return true;
@@ -3114,7 +3114,7 @@ bool Verifier::run_slot_rows(const int* rows, int S, const int32_t* tokens, cons
     if (le_ < g.n_layers) return next_ == nullptr || next_->run_slot_rows(rows, S, tokens, pos, pool, next_user_, out, err);
     if (!sample_rows(S, err)) return false;
     for (int t = 0; t < S; ++t) out[t] = ((volatile int32_t*) h_out_)[t];
-    note_nonfinite(S, last_pos_b_);
+    note_nonfinite(S, window_.positions);
     progress_at("decode");
     progress_beat();
     return true;
@@ -3122,44 +3122,44 @@ bool Verifier::run_slot_rows(const int* rows, int S, const int32_t* tokens, cons
 
 bool Verifier::commit_slots(std::string& err) {
     std::vector<int> keep(slots_.size(), 0);
-    for (int t = 0; t < last_t_; ++t) ++keep[(size_t) last_rows_[t]];
+    for (int t = 0; t < window_.row_count; ++t) ++keep[(size_t) window_.slots[t]];
     return commit_slot_prefixes(keep.data(), err);
 }
 
 bool Verifier::commit_slot_prefixes(const int* keep, std::string& err) {
     const OnDevice on_device(device_);
-    if (!last_batch_ || last_t_ < 1) { err = "verify: commit_slots without a batch window"; return false; }
-    const int S = last_t_;
+    if (!window_.is_batch || window_.row_count < 1) { err = "verify: commit_slots without a batch window"; return false; }
+    const int S = window_.row_count;
     const Clock::time_point t0 = Clock::now();
     const int64_t CB = 2 + max_t_;
     // One prefix per slot: rejected draft rows must not enter recurrent state.
     for (int t = 0; t < S;) {
         const int first = t;
-        while (t < S && last_rows_[t] == last_rows_[first]) ++t;
-        const int n = keep[last_rows_[first]];
+        while (t < S && window_.slots[t] == window_.slots[first]) ++t;
+        const int n = keep[window_.slots[first]];
         if (n < 1 || n > t - first) {
             err = "verify: accepted prefix is outside its slot group";
             return false;
         }
-        int32_t* c = h_commitb_ + (size_t) last_rows_[first] * CB;
+        int32_t* c = h_commitb_ + (size_t) window_.slots[first] * CB;
         c[0] = n;
         c[1] = n - 1;
         for (int j = 0; j < max_t_; ++j)
-            c[2 + j] = j < n ? (int32_t) last_pos_b_[first + j] : -1;
+            c[2 + j] = j < n ? (int32_t) window_.positions[first + j] : -1;
     }
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    const cudaError_t le = cudaGraphLaunch(commit_bm_[bkey(last_rows_, S, row_base_)], cs_);
+    const cudaError_t le = cudaGraphLaunch(commit_bm_[bkey(window_.slots, S, row_base_)], cs_);
     if (le != cudaSuccess) { err = std::string("verify: batch commit launch: ") + cudaGetErrorString(le); return false; }
     const cudaError_t se = cudaStreamSynchronize(cs_);
     if (se != cudaSuccess) { err = std::string("verify: batch commit: ") + cudaGetErrorString(se); return false; }
     if (ple_stage())
         for (int t = 0; t < S;) {
             const int first = t;
-            while (t < S && last_rows_[t] == last_rows_[first]) ++t;
-            SessionState& sx = *slots_[(size_t) last_rows_[first]];
-            for (int u = first; u < first + keep[last_rows_[first]]; ++u) {
+            while (t < S && window_.slots[t] == window_.slots[first]) ++t;
+            SessionState& sx = *slots_[(size_t) window_.slots[first]];
+            for (int u = first; u < first + keep[window_.slots[first]]; ++u) {
                 sx.ple_prev[0] = sx.ple_prev[1];
-                sx.ple_prev[1] = last_tokens_[u];
+                sx.ple_prev[1] = window_.tokens[u];
             }
         }
     ms_commit += ms_since(t0);
@@ -3169,9 +3169,9 @@ bool Verifier::commit_slot_prefixes(const int* keep, std::string& err) {
 bool Verifier::sample_rows(int S, std::string& err) {
     bool any = false;
     for (int t = 0; t < S; ++t) {
-        strata::kernels::SamplerParams sp = slot_sp_[(size_t) last_rows_[t]];
+        strata::kernels::SamplerParams sp = slot_sp_[(size_t) window_.slots[t]];
         if (sp.greedy || sp.temperature <= 0.0f) continue;
-        sp.counter = (uint64_t) last_pos_b_[t];   // Philox(seed, position): the solo window's draw for this position
+        sp.counter = (uint64_t) window_.positions[t];   // Philox(seed, position): the solo window's draw for this position
         sp.penalty_last_n = 0;
         strata::kernels::sample_tokens(head_logits_ + (size_t) t * (size_t) n_vocab_, 1, (int) n_vocab_, nullptr, 0, sp,
                                        m_out_ + t, cs_);
@@ -3183,7 +3183,7 @@ bool Verifier::sample_rows(int S, std::string& err) {
 
 bool Verifier::batch_launch(int base, int S, const int32_t* tokens, const int64_t* pos, std::string& err) {
     const OnDevice on_device(device_);
-    if (b_running_) { err = "verify: batch_launch while this stage is busy"; return false; }
+    if (window_.poll.running) { err = "verify: batch_launch while this stage is busy"; return false; }
     int rows[8] = {};
     for (int t = 0; t < S && t < 8; ++t) rows[t] = base + t;
     if (!stage_batch(rows, S, base, tokens, pos, err)) return false;
@@ -3197,18 +3197,18 @@ bool Verifier::batch_launch(int base, int S, const int32_t* tokens, const int64_
             sx.ple_prev[0] = sx.ple_prev[1];
             sx.ple_prev[1] = tokens[t];
         }
-    b_running_ = true;
-    b_k_ = 0;
-    b_steps_ = le_ - lb_;
-    b_last_ = Clock::now();
+    window_.poll.running = true;
+    window_.poll.layer = 0;
+    window_.poll.steps = le_ - lb_;
+    window_.poll.last_progress = Clock::now();
     return true;
 }
 
 int Verifier::batch_poll(PoolMultiFn pool, void* user, std::string& err) {
-    if (!b_running_) return 1;
+    if (!window_.poll.running) return 1;
     const OnDevice on_device(device_);
     volatile uint32_t* const seq = h_seq_;
-    const int S = last_t_;
+    const int S = window_.row_count;
     // #646: an all-resident stage's graph raises no host doorbells (see run_slot_rows): nothing to serve per layer,
     // so the poll is just "has the graph finished" - except the PLE flag, which the graph's first wait reads and
     // only the host can raise (the same raise run_slot_rows makes).  Per-window (ar_on): with a loan in flight the
@@ -3218,21 +3218,21 @@ int Verifier::batch_poll(PoolMultiFn pool, void* user, std::string& err) {
         _mm_sfence();
         *h_flag_ = 1;
     }
-    while (!ar_on() && b_k_ < b_steps_) {
-        const uint32_t want = (uint32_t) (b_k_ + 1);
+    while (!ar_on() && window_.poll.layer < window_.poll.steps) {
+        const uint32_t want = (uint32_t) (window_.poll.layer + 1);
         if (*seq < want) {
             const auto now = Clock::now();
-            if (now - b_last_ > std::chrono::milliseconds(2)) {
+            if (now - window_.poll.last_progress > std::chrono::milliseconds(2)) {
                 const cudaError_t q = cudaStreamQuery(cs_);
                 if (q != cudaErrorNotReady && *seq < want) {
-                    err = "verify batch: layer " + std::to_string(lb_ + b_k_) + " never rang (" +
+                    err = "verify batch: layer " + std::to_string(lb_ + window_.poll.layer) + " never rang (" +
                           (q == cudaSuccess ? std::string("graph finished") : std::string(cudaGetErrorString(q))) + ")";
-                    b_running_ = false;
+                    window_.poll.running = false;
                     return -1;
                 }
-                if (now - b_last_ > std::chrono::seconds(20)) {
-                    err = "verify batch: timed out at layer " + std::to_string(lb_ + b_k_) + released_note(release_gpu_waits(5000));
-                    b_running_ = false;
+                if (now - window_.poll.last_progress > std::chrono::seconds(20)) {
+                    err = "verify batch: timed out at layer " + std::to_string(lb_ + window_.poll.layer) + released_note(release_gpu_waits(5000));
+                    window_.poll.running = false;
                     return -1;
                 }
             }
@@ -3242,7 +3242,7 @@ int Verifier::batch_poll(PoolMultiFn pool, void* user, std::string& err) {
         cur_layer_ = want - 1;
         set_plan_slot(0);
         if (remote_opt_) remote_opt_->begin(h_w_, 0, S);
-        if (pool != nullptr) pool(user, h_x_, h_ids_, S, ss_->k, h_ymiss_, lb_ + b_k_);
+        if (pool != nullptr) pool(user, h_x_, h_ids_, S, ss_->k, h_ymiss_, lb_ + window_.poll.layer);
         if (remote_opt_) remote_opt_->end();
         progress_tick();
         std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -3259,22 +3259,22 @@ int Verifier::batch_poll(PoolMultiFn pool, void* user, std::string& err) {
         }
         *(volatile uint32_t*) h_flag_ = want;
         ms_pool += ms_since(b);
-        b_last_ = Clock::now();
-        ++b_k_;
+        window_.poll.last_progress = Clock::now();
+        ++window_.poll.layer;
     }
     const cudaError_t q = cudaStreamQuery(cs_);
     if (q == cudaErrorNotReady) return 0;
-    if (q != cudaSuccess) { err = std::string("verify batch: ") + cudaGetErrorString(q); b_running_ = false; return -1; }
+    if (q != cudaSuccess) { err = std::string("verify batch: ") + cudaGetErrorString(q); window_.poll.running = false; return -1; }
     const cudaError_t qc = cudaStreamQuery(copy_);   // no host function of this window may raise flag B in the next
     if (qc == cudaErrorNotReady) return 0;
     if (prof_on_) collect_profile();
     if (last_stage()) {
-        if (!sample_rows(S, err)) { b_running_ = false; return -1; }
-        for (int t = 0; t < S; ++t) b_out_[t] = ((volatile int32_t*) h_out_)[t];
-        note_nonfinite(S, last_pos_b_);
+        if (!sample_rows(S, err)) { window_.poll.running = false; return -1; }
+        for (int t = 0; t < S; ++t) window_.poll.output[t] = ((volatile int32_t*) h_out_)[t];
+        note_nonfinite(S, window_.positions);
     }
     ++windows;
-    b_running_ = false;
+    window_.poll.running = false;
     progress_beat();
     return 1;
 }
@@ -3359,7 +3359,7 @@ void Verifier::diag_pipelined(std::FILE* f, const char* name) const {
         return q == cudaSuccess ? "done" : q == cudaErrorNotReady ? "PENDING" : "error";
     };
     std::fprintf(f, "  %s: %s T=%d pos %lld served %lld/%lld; GPU rang %u, flags served %u A %u B %u; window event %s, "
-                    "commit event %s (commit launched %d)\n", name, fl_active_ ? "IN FLIGHT" : "idle", last_t_,
+                    "commit event %s (commit launched %d)\n", name, fl_active_ ? "IN FLIGHT" : "idle", window_.row_count,
                  (long long) last_pos0_, (long long) fl_k_, (long long) fl_total_, rd(h_seq_), rd(h_flag_), rd(h_flagA_),
                  rd(h_flagB_), ev(ev_done_), ev(ev_commit_), (int) commit_live_);
 }
@@ -3430,9 +3430,9 @@ bool Verifier::pl_launch(int T, const int32_t* tokens, int64_t pos0, std::string
         return false;
     }
     const Clock::time_point t0 = Clock::now();
-    last_batch_ = false;
-    bool staged = pl_prestaged_ && last_t_ == T && last_pos0_ == pos0;
-    for (int t = 0; staged && t < T; ++t) staged = last_tokens_[t] == tokens[t];
+    window_.is_batch = false;
+    bool staged = pl_prestaged_ && window_.row_count == T && last_pos0_ == pos0;
+    for (int t = 0; staged && t < T; ++t) staged = window_.tokens[t] == tokens[t];
     if (staged && ss.ple.ready() && ple_stage())
         staged = pl_prev_[0] == ss.ple_prev[0] && pl_prev_[1] == ss.ple_prev[1];
     pl_prestaged_ = false;
@@ -3599,7 +3599,7 @@ bool Verifier::pl_finish(int32_t* out, std::string& err) {
 
 bool Verifier::pl_commit_async(int n_keep, std::string& err) {
     const OnDevice on_device(device_);
-    if (n_keep < 1 || n_keep > last_t_) { err = "verify: commit count out of range"; return false; }
+    if (n_keep < 1 || n_keep > window_.row_count) { err = "verify: commit count out of range"; return false; }
     if (commit_exec_ == nullptr || ev_commit_ == nullptr) { err = "verify: pipelined commit not prepared"; return false; }
     const Clock::time_point t0 = Clock::now();
     if (commit_live_) {   // its graph reads the words below when it starts: the previous one has (a window ago)
@@ -3619,7 +3619,7 @@ bool Verifier::pl_commit_async(int n_keep, std::string& err) {
     if (ple_stage())
         for (int t = 0; t < n_keep; ++t) {
             ss_->ple_prev[0] = ss_->ple_prev[1];
-            ss_->ple_prev[1] = last_tokens_[t];
+            ss_->ple_prev[1] = window_.tokens[t];
         }
     ms_commit += ms_since(t0);
     return true;
