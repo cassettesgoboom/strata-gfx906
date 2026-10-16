@@ -14,3 +14,9 @@ The P4, P3, and P2 runs use different lane counts, context sizes, cache conditio
 ## Measurement caveat
 
 These values are sanitized historical estimates, not independently reproduced here. Keep the strict SSE estimate and whole-wave estimate distinct. Do not combine them into one rate or imply that either value proves the image's source provenance. Artifact identity and source limitations are documented in [PROVENANCE.md](PROVENANCE.md).
+
+## Current-source serial GPU smoke
+
+The [2026-10-16 machine-readable receipt](../../benchmarks/gfx906/receipts/2026-10-16-current-main-gpu-smoke.json) records a new, separate source-equivalent gfx906 binary (`73a0f98105938850c749a3f0ed1dfe08e1753a97379aa9741c7fb73351c0137c`) running on two MI50 cards. The first 4K-context request generated 146 tokens. Its continuation, constructed with the actual first answer, generated 130 tokens and reused 70 prompt tokens according to native request metrics. Both returned HTTP 200 with `stop` finish reasons; MTP accepted 173 of 208 offered proposals across the two requests. Candidate swap and OOM counters remained zero, and the isolated candidate shut down cleanly.
+
+The new binary and current-source server were mounted into the archived runtime image for this smoke. The published image still contains the archived binary. These short serial requests do not measure sustained multi-agent throughput, validate AB/CD, or prove exact native-token or recurrent-state parity. They must not be pooled with the historical benchmark table above.
