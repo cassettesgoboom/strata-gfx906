@@ -959,6 +959,10 @@ class StrataEngine:
         seed = sampling.get("seed")
         if isinstance(seed, int) and seed > 0:
             keys += f" seed={seed}"
+        audit_id = sampling.get("_strata_audit_id")
+        if os.environ.get("STRATA_RAW_TOKEN_AUDIT") and isinstance(audit_id, str) and \
+                re.fullmatch(r"[A-Za-z0-9_.-]{1,96}", audit_id):
+            keys += f" audit_id={audit_id}"
         # setup's calibration (tools/calibrate.py): engine settings for this request only, measured without a restart
         tune = sampling.get("strata_tune")
         if isinstance(tune, dict):
@@ -4939,6 +4943,12 @@ def make_handler(svc: Service):
 
         def _openai(self, req):
             req = svc.with_shared(req, "openai")
+            audit_id = None
+            if os.environ.get("STRATA_RAW_TOKEN_AUDIT"):
+                audit_id = self.headers.get("X-Strata-Audit-ID")
+                if not isinstance(audit_id, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,96}", audit_id):
+                    raise ValueError("X-Strata-Audit-ID is required and must be an opaque 1-96 character identifier")
+                req["_strata_audit_id"] = audit_id
             messages, tools, kw = openai_to_messages(req)
             self._no_local_images(messages)
             if tool_choice_of(req.get("tool_choice"))[0] == "none":   # as the Responses route: no tools are offered
@@ -4973,16 +4983,32 @@ def make_handler(svc: Service):
                 chunks = structured_chunks(chunks, validator)
             chunks = self._capture(chunks, "openai")
             if not req.get("stream"):
-                return self._json(200, openai_collect(chunks))
+                result = openai_collect(chunks)
+                if audit_id is not None:
+                    choice = result.get("choices", [{}])[0]
+                    usage = result.get("usage", {})
+                    print(f"strata audit: RAW_DONE audit_id={audit_id} status=complete api_tokens={usage.get('completion_tokens', 0)} finish={choice.get('finish_reason', 'unknown')}", file=sys.stderr, flush=True)
+                return self._json(200, result)
             self._sse()
+            api_done = False
+            api_tokens = -1  # unknown until the final usage chunk; never report an interrupted stream as zero tokens
+            api_finish = "unknown"
             try:
                 for c in chunks:
                     if c is None:
-                        self.wfile.write(b": keep-alive\n\n")      # an SSE comment: clients ignore it
+                        self.wfile.write(b": keep-alive\n\n")      # SSE comment: clients ignore it
                     else:
+                        usage = c.get("usage", {})
+                        if usage:
+                            api_tokens = int(usage.get("completion_tokens", api_tokens))
+                        choice = (c.get("choices") or [{}])[0]
+                        if choice.get("finish_reason") is not None:
+                            api_finish = str(choice["finish_reason"])
                         self.wfile.write(b"data: " + json.dumps(c, ensure_ascii=False).encode() + b"\n\n")
                     self.wfile.flush()
                 self.wfile.write(b"data: [DONE]\n\n")
+                self.wfile.flush()
+                api_done = True
             except OSError:
                 self._note(outcome="disconnected")
                 cancel.set()                                 # client went away: stop the engine
@@ -4999,6 +5025,10 @@ def make_handler(svc: Service):
                 err = {"error": {"type": "server_error", "message": str(e)}}   # headers are sent, so no 400 now
                 self._note(error=err["error"])
                 self.wfile.write(b"data: " + json.dumps(err).encode() + b"\n\ndata: [DONE]\n\n")
+            finally:
+                if audit_id is not None:
+                    status = "complete" if api_done else "incomplete"
+                    print(f"strata audit: RAW_DONE audit_id={audit_id} status={status} api_tokens={api_tokens} finish={api_finish}", file=sys.stderr, flush=True)
 
         def _responses_ready(self, req, events):
             """Send a finished Responses result that did not run on the engine."""

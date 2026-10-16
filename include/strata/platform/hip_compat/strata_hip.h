@@ -84,6 +84,8 @@
 #define cudaGetDevice hipGetDevice
 #define cudaSetDevice hipSetDevice
 #define cudaGetDeviceCount hipGetDeviceCount
+#define cudaDeviceGetStreamPriorityRange hipDeviceGetStreamPriorityRange
+#define cudaStreamCreateWithPriority hipStreamCreateWithPriority
 #define cudaGetDeviceProperties hipGetDeviceProperties
 // The shared-memory opt-in limit: some HIP versions report 0 for it on GCN cards; the real ceiling there is
 // the plain per-block limit (64 KB of LDS on gfx906).

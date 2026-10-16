@@ -1,0 +1,9 @@
+# Historical experimental AB/CD source candidate
+
+This branch is based on upstream Strata `v0.1.41` (`fb58e0dbc8399662c0e47c76578c6e878b14f6cf`). It preserves a selected set of source, build, and synthetic test changes from a non-Git experimental snapshot. It is a review and migration base for the opt-in two-stage AB/CD scheduler; it is not the current fork's default branch.
+
+The archived experimental runtime has native executable SHA-256 `ae93901c79771ace15db52942523c25fc46dd6f0d6a3b43698b28e6071c472cb`. This branch is **not claimed to reproduce that binary**. The original snapshot lacks Git metadata and a complete reproducible build receipt. Before publication, hardware-specific diagnostic labels were replaced with generic earlier/later-stage labels; that intentional edit also means the source hashes differ from the archived snapshot.
+
+The scheduler is gated by `STRATA_BATCH_ABCD=1` and its verbose diagnostics by `STRATA_BATCH_ABCD_TRACE=1`; both are experimental. Existing serial batch-MTP remains the safe default. The AB/CD path has not passed exact native token-ID or persistent recurrent-state parity against serial execution, and this historical branch has not been compiled or run on gfx906 as part of its publication. Its host-correlated in-flight timing is not a substitute for a device-side overlap measurement.
+
+The selected changes include batch transaction/commit plumbing, scheduler logic, request-correlated prefill telemetry, vision/MRoPE slot handling, and the accompanying synthetic tests. Current upstream has independently evolved gfx906, K8/V4, serial batch-MTP, vision, and slot state; do not cherry-pick this branch wholesale onto current main. Review each remaining delta against current upstream and validate CPU checks, a gfx906 build, isolated inference, and token/state parity before any merge or default promotion.
