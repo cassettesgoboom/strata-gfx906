@@ -147,7 +147,8 @@ def compare(serial: dict[str, Any], abcd: dict[str, Any]) -> dict[str, Any]:
     return {
         "equal": True,
         "synthetic_contract_only": bool(serial["provenance"].get("synthetic") or abcd["provenance"].get("synthetic")),
-        "runtime_parity_claim": not bool(serial["provenance"].get("synthetic") or abcd["provenance"].get("synthetic")),
+        "runtime_parity_claim": False,
+        "warning": "Equality compares supplied traces only; capture/provenance authenticity and full correctness require independent evidence.",
         "first_divergence": None,
         "occupancy": {
             "serial": serial.get("occupancy"),

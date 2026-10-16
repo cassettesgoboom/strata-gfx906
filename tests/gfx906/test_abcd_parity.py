@@ -22,6 +22,7 @@ class AbcdParityTests(unittest.TestCase):
         self.assertTrue(result["equal"], result)
         self.assertTrue(result["synthetic_contract_only"])
         self.assertFalse(result["runtime_parity_claim"])
+        self.assertIn("authenticity", result["warning"])
         self.assertFalse(result["occupancy"]["compared_for_parity"])
         self.assertNotEqual(result["occupancy"]["serial"], result["occupancy"]["abcd"])
 
@@ -117,6 +118,17 @@ class AbcdParityTests(unittest.TestCase):
                 changed = deepcopy(self.abcd)
                 changed["requests"][0]["commits"][0][field] = value
                 self.assertFalse(abcd_parity.compare(self.serial, changed)["equal"])
+
+    def test_missing_synthetic_markers_never_enable_runtime_claim(self):
+        serial = deepcopy(self.serial)
+        abcd = deepcopy(self.abcd)
+        del serial["provenance"]["synthetic"]
+        del abcd["provenance"]["synthetic"]
+        result = abcd_parity.compare(serial, abcd)
+        self.assertTrue(result["equal"], result)
+        self.assertFalse(result["synthetic_contract_only"])
+        self.assertFalse(result["runtime_parity_claim"])
+        self.assertIn("full correctness require independent evidence", result["warning"])
 
 
 if __name__ == "__main__":

@@ -62,5 +62,5 @@
     "A final-output match does not replace checking every commit boundary through the first divergence."
   ],
   "cpu_check": "python3 tests/gfx906/test_abcd_parity.py",
-  "limitation_addendum": "The tool reports synthetic_contract_only=true and runtime_parity_claim=false whenever either input provenance is synthetic; synthetic equality is never runtime evidence."
+  "limitation_addendum": "runtime_parity_claim is always false, regardless of provenance.synthetic. The comparator cannot authenticate capture or provenance; an equal result compares supplied traces only. Native capture authenticity and full correctness require independent evidence."
 }
