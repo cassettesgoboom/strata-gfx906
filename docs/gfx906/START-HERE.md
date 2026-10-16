@@ -29,9 +29,12 @@ The exact source base, archived native binary SHA-256, OCI index digest, and his
 listed in [CURRENT-STATE.md](CURRENT-STATE.md) and [EVIDENCE.md](EVIDENCE.md). The archived figures are tied to that
 binary and the public dual-MI50 32 GB / K8-V4 configuration; they do not validate the current source.
 
-A current-main-equivalent binary has passed a short serial dual-MI50 GPU smoke with a cached continuation; see the
-[separate receipt](../../benchmarks/gfx906/receipts/2026-10-16-current-main-gpu-smoke.json). The archived AB/CD opt-in
-delta is not integrated into current main, and token/state parity remains open. Use exact source and artifact
+The short serial dual-MI50 GPU smoke with a cached continuation used a source-equivalent binary for pre-merge
+main commit `64185a40962121b9adfc20e0e1a45b634cfeb472` (native SHA-256
+`73a0f98105938850c749a3f0ed1dfe08e1753a97379aa9741c7fb73351c0137c`); see the [separate
+receipt](../../benchmarks/gfx906/receipts/2026-10-16-current-main-gpu-smoke.json). It does not validate current
+main `73e01b3a5f1c577899e3f668e7e913759a1f7455`, which has not been rebuilt or GPU-smoked. The archived AB/CD
+opt-in delta is not integrated into current main, and token/state parity remains open. Use exact source and artifact
 identities in any new report. Historical throughput measurements are not evidence for the present source.
 
 ## Checked-in CLI
