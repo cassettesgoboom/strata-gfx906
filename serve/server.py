@@ -68,6 +68,7 @@ from serve.structured import StructuredOutputError, prepare_format, validated_js
 from serve import responses as responses_api  # noqa: E402
 from serve.responses import ResponsesError, error_body as responses_error_body  # noqa: E402
 from serve import images as images_api  # noqa: E402
+from serve import native_trace  # noqa: E402
 
 IM_END = "<|im_end|>"
 IMAGE_PAD = "<|image_pad|>"
@@ -1474,7 +1475,7 @@ class StrataEngine:
         with self.slot_cv:
             return any(e[0] * 2 <= plen for e in self.wait_lens)
 
-    def generate_batched(self, ids, max_new, sampling, cancel, embeddings=None):
+    def generate_batched(self, ids, max_new, sampling, cancel, embeddings=None, request_id=None):
         """--batch.  Alone (no slot busy, nobody waiting): the solo path (GEN, with drafts: the fastest stream)
         - and when another request arrives meanwhile, this one is STOPped and continues in a batch slot (BGEN with
         its prompt + what it generated: the engine reuses that prefix).  Otherwise: BGEN into a free slot, then the
@@ -1497,6 +1498,7 @@ class StrataEngine:
         if not ok:
             return
         holding, born = True, self.gen                  # (the engine it now has the control lines of)
+        trace_key = f" {native_trace.field(request_id)}" if native_trace.enabled() else ""
         btrace("ctl acquired")
         slot, gen0, reserved = None, None, None
         phase = "none"            # solo -> (admit -> slot) ; "done" once the engine has finished with this request
@@ -1513,7 +1515,7 @@ class StrataEngine:
                 with self.slot_cv:
                     alone = not any(self.slot_busy) and self.waiting == 0
                 if alone and left > 1:
-                    head = f"GENI {left}{keys} {embeddings}" if embeddings else f"GEN {left}{keys}"
+                    head = f"GENI {left}{keys}{trace_key} {embeddings}" if embeddings else f"GEN {left}{keys}{trace_key}"
                     self._last_done = None                  # (#879: this request's DONE decides below)
                     self._send(f"{head} {','.join(str(int(t)) for t in prompt)}")
                     phase = "solo"
@@ -1625,7 +1627,7 @@ class StrataEngine:
                         holding, born = True, self.gen                  # (the engine it now has the control lines of)
                     while not self.slot_q[slot].empty():
                         self.slot_q[slot].get_nowait()
-                    head = f"BGENI {slot} {left}{keys} {embeddings}" if embeddings else f"BGEN {slot} {left}{keys}"
+                    head = f"BGENI {slot} {left}{keys}{trace_key} {embeddings}" if embeddings else f"BGEN {slot} {left}{keys}{trace_key}"
                     live = {"slot": slot, "state": "reading", "prompt_tokens": len(prompt), "generated": 0,
                             "started": time.time(), "first_token": None}
                     self.slot_live[slot] = live
@@ -1851,7 +1853,7 @@ class StrataEngine:
                          "tok_s": round(r["generated"] / max(1e-6, now - ft), 1) if ft else None})
         return view
 
-    def generate(self, ids, max_new, sampling, cancel, embeddings=None):
+    def generate(self, ids, max_new, sampling, cancel, embeddings=None, request_id=None):
         """Yields token ids, and None as a heartbeat every 10 s while the engine is quiet (reading a long prompt):
         the HTTP layer turns it into an SSE comment, which keeps clients' watchdogs calm and notices a client that
         has gone.  A consumer that stops early (or `cancel`) makes the engine STOP, so it does not run to max_new."""
@@ -1859,13 +1861,14 @@ class StrataEngine:
             raise EngineDied("the engine is unavailable; this request was not sent")
         bias_api.validate_request(sampling or {}, self, None)
         if getattr(self, "batch", 0):
-            yield from self.generate_batched(ids, max_new, sampling, cancel, embeddings)
+            yield from self.generate_batched(ids, max_new, sampling, cancel, embeddings, request_id)
             return
         self.progress, self.progress_ms, self.reused = None, 0, 0
         self.prefill_tok_s_mean = None
         # an image request takes the same sampling keys as text (#75: it used to decode greedily whatever was asked)
-        head = f"GENI {int(max_new)}{self.sampling_keys(sampling or {})} {embeddings}" if embeddings else \
-            f"GEN {int(max_new)}{self.sampling_keys(sampling or {})}"
+        trace_key = f" {native_trace.field(request_id)}" if native_trace.enabled() else ""
+        head = f"GENI {int(max_new)}{self.sampling_keys(sampling or {})}{trace_key} {embeddings}" if embeddings else \
+            f"GEN {int(max_new)}{self.sampling_keys(sampling or {})}{trace_key}"
         try:
             self.proc.stdin.write(f"{head} {','.join(str(int(t)) for t in ids)}\n")
             self.proc.stdin.flush()
@@ -3614,10 +3617,12 @@ class Service:
 
     def begin_request(self, path, req):
         """#332: a monitor record for this request, or None when the monitor is off (nothing is kept then)."""
+        request_id = uuid.uuid4().hex
+        self.request_trace.id = request_id
         if not self.api_monitor:
             return None
         raw = json.dumps(req, ensure_ascii=False, indent=2)
-        record = {"id": uuid.uuid4().hex[:12], "path": path, "model": req.get("model") or self.model,
+        record = {"id": request_id[:12], "path": path, "model": req.get("model") or self.model,
                   "started_at": time.time(), "state": "queued", "stream": bool(req.get("stream")),
                   "response_format": (req.get("response_format") or {}).get("type")
                   if isinstance(req.get("response_format"), dict) else None,
@@ -4213,8 +4218,11 @@ class Service:
                     while True:
                         segment_before = getattr(self.engine, "last", None)
                         segments_before = len(segments)     # (#879: a pass sent again leaves no segment)
-                        gen = self.engine.generate(prompt, max_new - n, sampling, cancel, embeddings=emb) if emb \
-                            else self.engine.generate(prompt, max_new - n, sampling, cancel)
+                        trace_arg = ({"request_id": getattr(self.request_trace, "id", None)}
+                                     if native_trace.enabled() else {})
+                        gen = self.engine.generate(prompt, max_new - n, sampling, cancel, embeddings=emb,
+                                                   **trace_arg) if emb else \
+                            self.engine.generate(prompt, max_new - n, sampling, cancel, **trace_arg)
                         recover_prompt = None
                         seg, wrap, leaving = [], False, False   # this pass's tokens; the budget is reached; closed
                         nonfinite = False               # #879: the engine ended this pass on non-finite logits
@@ -5575,7 +5583,8 @@ def make_handler(svc: Service):
                         record["wallclock_s"] = round(time.perf_counter() - record["_clock"], 3)
                         record["finished_at"] = time.time()
                         record["state"] = "error" if record.get("error") else record.get("outcome", "completed")
-                    svc.request_trace.record = None
+                svc.request_trace.record = None
+                svc.request_trace.id = None
 
         def _images(self, req):
             """POST /v1/images/generations (serve/images.py): one sd-cli job in the GPU's turn."""
