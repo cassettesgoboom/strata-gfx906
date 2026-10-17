@@ -34,6 +34,16 @@ and its `--help` path loaded. The 44-test CPU suite and both hosted CPU checks p
 evidence only: no GPU runtime test or inference, no two-slice AB/CD isolation, no native-token or recurrent-state
 parity, and no new image publication were performed. The PR comment contains the sanitized build receipt.
 
+## PR #25 opt-in native request correlation build
+
+[PR #25](https://github.com/cassettesgoboom/strata-gfx906/pull/25) merged opt-in request-ID transport and
+native-leg correlation for future correctness traces. Its isolated gfx906 HIP build produced native binary
+SHA-256 `c3aebb611d91f104786b6b8bc5773977727ed12be6fafa44064c8c14b76566ca`, using llama.cpp commit
+`3cf03257f219afbe7334045ff7c6a06ac68c627d` and build image
+`sha256:06c8bd0e6ede3614ad3467a056cce06e111ca854e3c7251cc0a140e89c9c32fb`. Both hosted CPU checks passed.
+This does not include a model-backed native protocol test, GPU runtime smoke, token or recurrent-state parity,
+an AB/CD port, a new Docker image, or a current-main GPU smoke.
+
 ## CPU-only AB/CD trace comparator
 
 [PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds a CPU-only comparator for supplied serial-OFF and AB/CD-ON native commit traces, with synthetic fixtures and fail-closed tests. The current v2 contract compares ordered native token IDs per committed window and persistent-state hashes at the end of that window; it also checks matched provenance and inputs, cache history, commit boundaries, and MTP decisions. Its output always sets `runtime_parity_claim` to `false`: matching JSON proves only that the supplied traces compare equal. It does not authenticate trace capture, establish runtime parity, run a model, validate GPU behavior, or port AB/CD to current main. See [the v2 contract](../../benchmarks/gfx906/fixtures/abcd-parity-contract-v2.json). V1 traces require regeneration or a migration justified by original transaction-boundary evidence.
