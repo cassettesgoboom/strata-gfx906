@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import tempfile
 import unittest
 from copy import deepcopy
 from pathlib import Path
@@ -105,6 +106,75 @@ class StateTraceTests(unittest.TestCase):
         changed = deepcopy(self.candidate)
         del changed["checkpoints"][0]["components"][0]["dtype"]
         self.assertIn("missing metadata dtype", state_trace.compare(self.serial, changed)["first_divergence"])
+
+    def test_unknown_fields_are_rejected_at_schema_object_boundaries(self):
+        schema = json.loads((FIXTURES / "native-state-trace-v1.schema.json").read_text())
+        def walk(node):
+            if isinstance(node, dict):
+                if node.get("type") == "object":
+                    self.assertIs(node.get("additionalProperties"), False)
+                for value in node.values():
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+        walk(schema)
+        mutations = (
+            ((), "unexpected"),
+            (("window_identity",), "unexpected"),
+            (("layer_ranges", 0), "unexpected"),
+            (("stage_plan", 0), "unexpected"),
+            (("stage_plan", 0, "owned_components", 0), "unexpected"),
+            (("provenance",), "unexpected"),
+            (("checkpoints", 0), "unexpected"),
+            (("checkpoints", 0, "components", 0), "unexpected"),
+        )
+        for path, field in mutations:
+            with self.subTest(path=path):
+                changed = deepcopy(self.serial)
+                target = changed
+                for part in path:
+                    target = target[part]
+                target[field] = "extra"
+                self.assertTrue(any("unknown field" in error for error in state_trace.validate_trace(changed)))
+
+    def test_nullable_layer_indices_match_schema_and_validator(self):
+        schema = json.loads((FIXTURES / "native-state-trace-v1.schema.json").read_text())
+        range_schema = schema["properties"]["layer_ranges"]["items"]
+        component_schema = schema["properties"]["checkpoints"]["items"]["properties"]["components"]["items"]
+        self.assertIn("null", range_schema["properties"]["layer_index_start"]["type"])
+        self.assertIn("null", component_schema["properties"]["layer_index"]["type"])
+        self.assertEqual(range_schema["allOf"][0]["then"]["properties"]["layer_index_start"]["type"], "null")
+        self.assertEqual(component_schema["allOf"][0]["then"]["properties"]["layer_index"]["type"], "null")
+        self.assertFalse(state_trace.validate_trace(self.serial))
+        changed = deepcopy(self.serial)
+        changed["checkpoints"][0]["components"][-1]["layer_index"] = 0
+        self.assertTrue(any("metadata layer_index" in error for error in state_trace.validate_trace(changed)))
+
+    def test_schema_count_limits_track_validator_limits(self):
+        schema = json.loads((FIXTURES / "native-state-trace-v1.schema.json").read_text())
+        self.assertEqual(schema["properties"]["stage_plan"]["maxItems"], state_trace.MAX_STAGES)
+        self.assertEqual(schema["properties"]["checkpoints"]["maxItems"], state_trace.MAX_STAGES)
+        self.assertEqual(schema["properties"]["window_identity"]["properties"]["committed_token_ids"]["maxItems"], state_trace.MAX_COMMITTED_TOKENS)
+        self.assertEqual(schema["properties"]["layer_ranges"]["items"]["properties"]["count"]["maximum"], state_trace.MAX_COMPONENTS)
+        self.assertIn(str(state_trace.MAX_TRACE_FILE_BYTES), schema["$comment"])
+
+    def test_input_and_expansion_limits_fail_before_unbounded_work(self):
+        changed = deepcopy(self.serial)
+        changed["stage_plan"] = changed["stage_plan"] * (state_trace.MAX_STAGES + 1)
+        self.assertIn("stage_plan exceeds", state_trace.validate_trace(changed)[-1])
+        changed = deepcopy(self.serial)
+        changed["layer_ranges"][0]["count"] = state_trace.MAX_COMPONENTS + 1
+        self.assertIn("count exceeds", state_trace.validate_trace(changed)[0])
+        changed = deepcopy(self.serial)
+        changed["layer_ranges"][0]["count"] = state_trace.MAX_COMPONENTS
+        changed["layer_ranges"][1]["count"] = 1
+        self.assertTrue(any("expanded component inventory exceeds" in error for error in state_trace.validate_trace(changed)))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "oversized.json"
+            path.write_bytes(b" " * (state_trace.MAX_TRACE_FILE_BYTES + 1))
+            with self.assertRaisesRegex(ValueError, "exceeds"):
+                state_trace.load_json_bounded(path)
 
     def test_v2_transaction_comparator_remains_independent(self):
         old_spec = importlib.util.spec_from_file_location("abcd_parity", ROOT / "tests/gfx906/abcd_parity.py")

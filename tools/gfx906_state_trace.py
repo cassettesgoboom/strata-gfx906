@@ -16,6 +16,18 @@ FORMAT = "native_recurrent_state_trace_v1"
 COMPONENT_KINDS = {"gdn_recurrent", "qsa_indexer_idx_block_pos", "ple_prev_token"}
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 META_FIELDS = ("component_id", "ordinal", "layer_index", "shape", "dtype", "byte_order", "serialization")
+MAX_TRACE_FILE_BYTES = 2 * 1024 * 1024
+MAX_STAGES = 64
+MAX_COMPONENTS = 4096
+MAX_COMPONENT_RECORDS = MAX_STAGES * MAX_COMPONENTS
+MAX_COMMITTED_TOKENS = 4096
+MAX_SHAPE_RANK = 16
+
+
+def _reject_unknown(value: dict[str, Any], allowed: set[str], where: str, errors: list[str]) -> None:
+    unknown = sorted((key for key in value if key not in allowed), key=str)
+    if unknown:
+        errors.append(f"{where}: unknown field(s): {', '.join(str(key) for key in unknown)}")
 
 
 def _key(component: dict[str, Any]) -> tuple[str, int]:
@@ -26,6 +38,8 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
     errors: list[str] = []
     if not isinstance(trace, dict):
         return [f"{label}: expected object"]
+    _reject_unknown(trace, {"trace_format", "evidence_class", "mode", "window_identity", "layer_ranges",
+                            "stage_plan", "provenance", "checkpoints"}, label, errors)
     if trace.get("trace_format") != FORMAT:
         errors.append(f"{label}: trace_format must be {FORMAT}")
     evidence_class = trace.get("evidence_class")
@@ -38,13 +52,15 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
     if not isinstance(identity, dict):
         errors.append(f"{label}: window_identity is required")
     else:
+        _reject_unknown(identity, {"request_id", "commit_window_index", "committed_token_ids", "committed_token_count"},
+                        f"{label}: window_identity", errors)
         if not isinstance(identity.get("request_id"), str) or not identity["request_id"].strip():
             errors.append(f"{label}: window_identity.request_id is required")
         if type(identity.get("commit_window_index")) is not int or identity["commit_window_index"] < 0:
             errors.append(f"{label}: window_identity.commit_window_index must be a non-negative integer")
         ids = identity.get("committed_token_ids")
-        if not isinstance(ids, list) or not ids or any(type(token) is not int or token < 0 for token in ids):
-            errors.append(f"{label}: window_identity.committed_token_ids must be a non-empty list of token IDs")
+        if not isinstance(ids, list) or not ids or len(ids) > MAX_COMMITTED_TOKENS or any(type(token) is not int or token < 0 for token in ids):
+            errors.append(f"{label}: committed_token_ids must contain 1 to {MAX_COMMITTED_TOKENS} non-negative integer IDs")
         if type(identity.get("committed_token_count")) is not int or identity["committed_token_count"] != (len(ids) if isinstance(ids, list) else -1):
             errors.append(f"{label}: committed_token_count must equal the number of committed_token_ids")
 
@@ -54,11 +70,17 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
     if not isinstance(ranges, list) or not ranges:
         errors.append(f"{label}: layer_ranges must be a non-empty explicit inventory")
         ranges = []
+    if len(ranges) > 3:
+        return errors + [f"{label}: layer_ranges exceeds the maximum of three component ranges"]
     for ri, item in enumerate(ranges):
         where = f"{label}: layer_ranges[{ri}]"
         if not isinstance(item, dict):
             errors.append(f"{where} must be an object")
             continue
+        _reject_unknown(item, {"component_id", "ordinal_start", "count", "layer_index_start", "shape", "dtype",
+                               "byte_order", "serialization"}, where, errors)
+        if "layer_index_start" not in item:
+            errors.append(f"{where}: missing layer_index_start")
         cid = item.get("component_id")
         start, count = item.get("ordinal_start"), item.get("count")
         layer_start = item.get("layer_index_start")
@@ -68,9 +90,14 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
         if type(start) is not int or start != 0 or type(count) is not int or count < 1:
             errors.append(f"{where}: ordinal_start must be zero and count positive")
             continue
+        if count > MAX_COMPONENTS:
+            errors.append(f"{where}: count exceeds {MAX_COMPONENTS}")
+            continue
         if cid in range_counts:
             errors.append(f"{where}: duplicate layer range for {cid}")
             continue
+        if len(inventory) + count > MAX_COMPONENTS:
+            return errors + [f"{label}: expanded component inventory exceeds {MAX_COMPONENTS} entries"]
         if cid == "ple_prev_token":
             if count != 1 or layer_start is not None:
                 errors.append(f"{where}: PLE token inventory must be one non-layer component")
@@ -79,7 +106,7 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
             continue
         range_counts[cid] = count
         shape = item.get("shape")
-        if not isinstance(shape, list) or any(type(x) is not int or x < 0 for x in shape):
+        if not isinstance(shape, list) or len(shape) > MAX_SHAPE_RANK or any(type(x) is not int or x < 0 for x in shape):
             errors.append(f"{where}: shape must be a list of non-negative integers")
         if not isinstance(item.get("dtype"), str) or not item["dtype"]:
             errors.append(f"{where}: dtype is required")
@@ -94,6 +121,8 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
                      "shape": shape, "dtype": item.get("dtype"),
                      "byte_order": item.get("byte_order"), "serialization": item.get("serialization")}
             inventory[(cid, ordinal)] = entry
+        if len(inventory) > MAX_COMPONENTS:
+            return errors + [f"{label}: expanded component inventory exceeds {MAX_COMPONENTS} entries"]
     if set(range_counts) != COMPONENT_KINDS:
         errors.append(f"{label}: layer_ranges must declare each required component kind exactly once")
 
@@ -101,6 +130,8 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
     if not isinstance(plan, list) or not plan:
         errors.append(f"{label}: stage_plan must be a non-empty list")
         plan = []
+    if len(plan) > MAX_STAGES:
+        return errors + [f"{label}: stage_plan exceeds the maximum of {MAX_STAGES} stages"]
     stage_ids: list[str] = []
     expected_keys = set(inventory)
     for i, stage in enumerate(plan):
@@ -108,11 +139,15 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
         if not isinstance(stage, dict):
             errors.append(f"{where} must be an object")
             continue
+        _reject_unknown(stage, {"stage_id", "owned_components"}, where, errors)
         sid = stage.get("stage_id")
         stage_ids.append(sid if isinstance(sid, str) else "")
         refs = stage.get("owned_components")
         if not isinstance(refs, list):
             errors.append(f"{where}: owned_components must be a list of component ordinals")
+            continue
+        if len(refs) > MAX_COMPONENTS:
+            errors.append(f"{where}: owned_components exceeds {MAX_COMPONENTS} entries")
             continue
         keys: list[tuple[str, int]] = []
         for ref in refs:
@@ -120,6 +155,7 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
                     or ref["component_id"] not in COMPONENT_KINDS or type(ref.get("ordinal")) is not int):
                 errors.append(f"{where}: invalid component ordinal reference")
                 continue
+            _reject_unknown(ref, {"component_id", "ordinal"}, f"{where}: owned component", errors)
             keys.append((ref["component_id"], ref["ordinal"]))
         if len(keys) != len(set(keys)):
             errors.append(f"{where}: duplicate owned component ordinal")
@@ -132,6 +168,8 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
     if not isinstance(provenance, dict):
         errors.append(f"{label}: provenance object is required")
     else:
+        _reject_unknown(provenance, {"source_commit", "binary_sha256", "model_sha256", "trace_capture_method"},
+                        f"{label}: provenance", errors)
         for key in ("source_commit", "trace_capture_method"):
             if not isinstance(provenance.get(key), str) or not provenance[key].strip():
                 errors.append(f"{label}: provenance.{key} is required")
@@ -143,11 +181,14 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
     if not isinstance(checkpoints, list) or len(checkpoints) != len(plan):
         errors.append(f"{label}: checkpoint stage coverage must exactly match stage_plan")
         checkpoints = checkpoints if isinstance(checkpoints, list) else []
+    if len(checkpoints) > MAX_STAGES:
+        return errors + [f"{label}: checkpoints exceeds the maximum of {MAX_STAGES} stages"]
     for i, cp in enumerate(checkpoints):
         where = f"{label}: checkpoint {i}"
         if not isinstance(cp, dict):
             errors.append(f"{where} must be an object")
             continue
+        _reject_unknown(cp, {"stage_index", "stage_id", "components"}, where, errors)
         if type(cp.get("stage_index")) is not int or cp["stage_index"] != i:
             errors.append(f"{where}: stage_index must be ordered and zero-based")
         if i < len(plan) and isinstance(plan[i], dict) and cp.get("stage_id") != plan[i].get("stage_id"):
@@ -156,12 +197,17 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
         if not isinstance(components, list):
             errors.append(f"{where}: components must be a list")
             continue
+        if len(components) > MAX_COMPONENTS:
+            errors.append(f"{where}: components exceeds {MAX_COMPONENTS} entries")
+            continue
         found: dict[tuple[str, int], dict[str, Any]] = {}
         component_order: list[tuple[str, int]] = []
         for component in components:
             if not isinstance(component, dict):
                 errors.append(f"{where}: component must be an object")
                 continue
+            _reject_unknown(component, {"component_id", "ordinal", "layer_index", "shape", "dtype", "byte_order",
+                                        "serialization", "sha256"}, f"{where}: component", errors)
             if (type(component.get("ordinal")) is not int or not isinstance(component.get("component_id"), str)
                     or component["component_id"] not in COMPONENT_KINDS):
                 errors.append(f"{where}: component_id and integer ordinal are required")
@@ -181,6 +227,8 @@ def validate_trace(trace: Any, label: str = "trace") -> list[str]:
                     errors.append(f"{where}: {key} metadata {field} differs from layer_ranges")
             if not isinstance(component.get("sha256"), str) or HEX64.fullmatch(component["sha256"]) is None:
                 errors.append(f"{where}: {key} sha256 must be lowercase SHA-256 hex")
+        if len(checkpoints) * len(components) > MAX_COMPONENT_RECORDS:
+            errors.append(f"{where}: checkpoint component records exceed {MAX_COMPONENT_RECORDS}")
         if set(found) != expected_keys:
             missing = sorted(expected_keys - set(found))
             extra = sorted(set(found) - expected_keys)
@@ -231,11 +279,19 @@ def main() -> int:
     parser.add_argument("abcd_on", type=Path)
     args = parser.parse_args()
     try:
-        result = compare(json.loads(args.serial_off.read_text()), json.loads(args.abcd_on.read_text()))
-    except (OSError, json.JSONDecodeError) as exc:
+        result = compare(load_json_bounded(args.serial_off), load_json_bounded(args.abcd_on))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError) as exc:
         result = {"diagnostic_records_equal": False, "first_divergence": str(exc), "runtime_parity_claim": False}
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["diagnostic_records_equal"] else 1
+
+
+def load_json_bounded(path: Path) -> Any:
+    with path.open("rb") as stream:
+        raw = stream.read(MAX_TRACE_FILE_BYTES + 1)
+    if len(raw) > MAX_TRACE_FILE_BYTES:
+        raise ValueError(f"{path}: trace file exceeds {MAX_TRACE_FILE_BYTES} byte limit")
+    return json.loads(raw.decode("utf-8"))
 
 
 if __name__ == "__main__":
