@@ -2,17 +2,97 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "native-state-trace-v1.schema.json",
   "title": "gfx906 native recurrent state trace v1",
-  "description": "Contract only. Explicit stage ordered checkpoints and component metadata; no runtime capture is implied.",
+  "description": "Diagnostic contract for supplied stage ordered digests. It cannot prove capture authenticity or complete runtime inventory.",
   "type": "object",
-  "required": ["trace_format", "evidence_class", "mode", "stage_plan", "required_components", "provenance", "checkpoints"],
+  "required": ["trace_format", "evidence_class", "mode", "window_identity", "layer_ranges", "stage_plan", "provenance", "checkpoints"],
   "properties": {
     "trace_format": {"const": "native_recurrent_state_trace_v1"},
     "evidence_class": {"enum": ["synthetic_contract_only", "native_capture_unverified"]},
     "mode": {"enum": ["serial_off", "abcd_on"]},
-    "stage_plan": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
-    "required_components": {"type": "array", "minItems": 3, "items": {"enum": ["gdn_recurrent", "qsa_indexer_idx_block_pos", "ple_prev_token"]}, "uniqueItems": true},
-    "provenance": {"type": "object", "required": ["source_commit", "binary_sha256", "model_sha256", "trace_capture_method"], "properties": {"source_commit": {"type": "string", "minLength": 1}, "binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "model_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "trace_capture_method": {"type": "string", "minLength": 1}}},
-    "checkpoints": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["stage_index", "stage_id", "components"], "properties": {"stage_index": {"type": "integer", "minimum": 0}, "stage_id": {"type": "string", "minLength": 1}, "components": {"type": "array", "items": {"type": "object", "required": ["component_id", "scope", "shape", "dtype", "byte_order", "serialization", "sha256"], "properties": {"component_id": {"type": "string"}, "scope": {"type": "object", "required": ["layer_index"], "properties": {"layer_index": {"type": ["integer", "null"], "minimum": 0}}}, "shape": {"type": "array", "items": {"type": "integer", "minimum": 0}}, "dtype": {"type": "string", "minLength": 1}, "byte_order": {"enum": ["little", "big", "not_applicable"]}, "serialization": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}}}}}
+    "window_identity": {
+      "type": "object",
+      "required": ["request_id", "commit_window_index", "committed_token_ids", "committed_token_count"],
+      "properties": {
+        "request_id": {"type": "string", "minLength": 1},
+        "commit_window_index": {"type": "integer", "minimum": 0},
+        "committed_token_ids": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}},
+        "committed_token_count": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "layer_ranges": {
+      "type": "array", "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["component_id", "ordinal_start", "count", "layer_index_start", "shape", "dtype", "byte_order", "serialization"],
+        "properties": {
+          "component_id": {"enum": ["gdn_recurrent", "qsa_indexer_idx_block_pos", "ple_prev_token"]},
+          "ordinal_start": {"const": 0},
+          "count": {"type": "integer", "minimum": 1},
+          "layer_index_start": {"type": ["integer", "null"], "minimum": 0},
+          "shape": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+          "dtype": {"type": "string", "minLength": 1},
+          "byte_order": {"enum": ["little", "big", "not_applicable"]},
+          "serialization": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "stage_plan": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["stage_id", "owned_components"],
+        "properties": {
+          "stage_id": {"type": "string", "minLength": 1},
+          "owned_components": {
+            "type": "array", "minItems": 1,
+            "items": {"type": "object", "required": ["component_id", "ordinal"], "properties": {"component_id": {"enum": ["gdn_recurrent", "qsa_indexer_idx_block_pos", "ple_prev_token"]}, "ordinal": {"type": "integer", "minimum": 0}}, "additionalProperties": false}
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["source_commit", "binary_sha256", "model_sha256", "trace_capture_method"],
+      "properties": {
+        "source_commit": {"type": "string", "minLength": 1},
+        "binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "model_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "trace_capture_method": {"type": "string", "minLength": 1}
+      }
+    },
+    "checkpoints": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["stage_index", "stage_id", "components"],
+        "properties": {
+          "stage_index": {"type": "integer", "minimum": 0},
+          "stage_id": {"type": "string", "minLength": 1},
+          "components": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["component_id", "ordinal", "layer_index", "shape", "dtype", "byte_order", "serialization", "sha256"],
+              "properties": {
+                "component_id": {"enum": ["gdn_recurrent", "qsa_indexer_idx_block_pos", "ple_prev_token"]},
+                "ordinal": {"type": "integer", "minimum": 0},
+                "layer_index": {"type": ["integer", "null"], "minimum": 0},
+                "shape": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+                "dtype": {"type": "string", "minLength": 1},
+                "byte_order": {"enum": ["little", "big", "not_applicable"]},
+                "serialization": {"type": "string", "minLength": 1},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
   },
   "additionalProperties": false
 }

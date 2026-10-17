@@ -2,15 +2,127 @@
   "trace_format": "native_recurrent_state_trace_v1",
   "evidence_class": "synthetic_contract_only",
   "mode": "abcd_on",
-  "stage_plan": [
-    "after_prompt",
-    "after_target_0",
-    "after_window_commit"
+  "window_identity": {
+    "request_id": "r-01",
+    "commit_window_index": 0,
+    "committed_token_ids": [
+      900,
+      901
+    ],
+    "committed_token_count": 2
+  },
+  "layer_ranges": [
+    {
+      "component_id": "gdn_recurrent",
+      "ordinal_start": 0,
+      "count": 2,
+      "layer_index_start": 1,
+      "shape": [
+        1,
+        4,
+        8
+      ],
+      "dtype": "f32",
+      "byte_order": "little",
+      "serialization": "canonical-le-f32-v1"
+    },
+    {
+      "component_id": "qsa_indexer_idx_block_pos",
+      "ordinal_start": 0,
+      "count": 2,
+      "layer_index_start": 2,
+      "shape": [],
+      "dtype": "i64",
+      "byte_order": "little",
+      "serialization": "canonical-le-i64-v1"
+    },
+    {
+      "component_id": "ple_prev_token",
+      "ordinal_start": 0,
+      "count": 1,
+      "layer_index_start": null,
+      "shape": [],
+      "dtype": "u32",
+      "byte_order": "little",
+      "serialization": "canonical-le-u32-v1"
+    }
   ],
-  "required_components": [
-    "gdn_recurrent",
-    "qsa_indexer_idx_block_pos",
-    "ple_prev_token"
+  "stage_plan": [
+    {
+      "stage_id": "after_prompt",
+      "owned_components": [
+        {
+          "component_id": "gdn_recurrent",
+          "ordinal": 0
+        },
+        {
+          "component_id": "gdn_recurrent",
+          "ordinal": 1
+        },
+        {
+          "component_id": "qsa_indexer_idx_block_pos",
+          "ordinal": 0
+        },
+        {
+          "component_id": "qsa_indexer_idx_block_pos",
+          "ordinal": 1
+        },
+        {
+          "component_id": "ple_prev_token",
+          "ordinal": 0
+        }
+      ]
+    },
+    {
+      "stage_id": "after_target_0",
+      "owned_components": [
+        {
+          "component_id": "gdn_recurrent",
+          "ordinal": 0
+        },
+        {
+          "component_id": "gdn_recurrent",
+          "ordinal": 1
+        },
+        {
+          "component_id": "qsa_indexer_idx_block_pos",
+          "ordinal": 0
+        },
+        {
+          "component_id": "qsa_indexer_idx_block_pos",
+          "ordinal": 1
+        },
+        {
+          "component_id": "ple_prev_token",
+          "ordinal": 0
+        }
+      ]
+    },
+    {
+      "stage_id": "after_window_commit",
+      "owned_components": [
+        {
+          "component_id": "gdn_recurrent",
+          "ordinal": 0
+        },
+        {
+          "component_id": "gdn_recurrent",
+          "ordinal": 1
+        },
+        {
+          "component_id": "qsa_indexer_idx_block_pos",
+          "ordinal": 0
+        },
+        {
+          "component_id": "qsa_indexer_idx_block_pos",
+          "ordinal": 1
+        },
+        {
+          "component_id": "ple_prev_token",
+          "ordinal": 0
+        }
+      ]
+    }
   ],
   "provenance": {
     "source_commit": "synthetic-fixture",
@@ -25,9 +137,22 @@
       "components": [
         {
           "component_id": "gdn_recurrent",
-          "scope": {
-            "layer_index": 3
-          },
+          "ordinal": 0,
+          "layer_index": 1,
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "f32",
+          "byte_order": "little",
+          "serialization": "canonical-le-f32-v1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "component_id": "gdn_recurrent",
+          "ordinal": 1,
+          "layer_index": 2,
           "shape": [
             1,
             4,
@@ -40,9 +165,18 @@
         },
         {
           "component_id": "qsa_indexer_idx_block_pos",
-          "scope": {
-            "layer_index": 2
-          },
+          "ordinal": 0,
+          "layer_index": 2,
+          "shape": [],
+          "dtype": "i64",
+          "byte_order": "little",
+          "serialization": "canonical-le-i64-v1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        {
+          "component_id": "qsa_indexer_idx_block_pos",
+          "ordinal": 1,
+          "layer_index": 3,
           "shape": [],
           "dtype": "i64",
           "byte_order": "little",
@@ -51,9 +185,8 @@
         },
         {
           "component_id": "ple_prev_token",
-          "scope": {
-            "layer_index": null
-          },
+          "ordinal": 0,
+          "layer_index": null,
           "shape": [],
           "dtype": "u32",
           "byte_order": "little",
@@ -68,9 +201,22 @@
       "components": [
         {
           "component_id": "gdn_recurrent",
-          "scope": {
-            "layer_index": 3
-          },
+          "ordinal": 0,
+          "layer_index": 1,
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "f32",
+          "byte_order": "little",
+          "serialization": "canonical-le-f32-v1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "component_id": "gdn_recurrent",
+          "ordinal": 1,
+          "layer_index": 2,
           "shape": [
             1,
             4,
@@ -83,9 +229,18 @@
         },
         {
           "component_id": "qsa_indexer_idx_block_pos",
-          "scope": {
-            "layer_index": 2
-          },
+          "ordinal": 0,
+          "layer_index": 2,
+          "shape": [],
+          "dtype": "i64",
+          "byte_order": "little",
+          "serialization": "canonical-le-i64-v1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        {
+          "component_id": "qsa_indexer_idx_block_pos",
+          "ordinal": 1,
+          "layer_index": 3,
           "shape": [],
           "dtype": "i64",
           "byte_order": "little",
@@ -94,9 +249,8 @@
         },
         {
           "component_id": "ple_prev_token",
-          "scope": {
-            "layer_index": null
-          },
+          "ordinal": 0,
+          "layer_index": null,
           "shape": [],
           "dtype": "u32",
           "byte_order": "little",
@@ -111,9 +265,22 @@
       "components": [
         {
           "component_id": "gdn_recurrent",
-          "scope": {
-            "layer_index": 3
-          },
+          "ordinal": 0,
+          "layer_index": 1,
+          "shape": [
+            1,
+            4,
+            8
+          ],
+          "dtype": "f32",
+          "byte_order": "little",
+          "serialization": "canonical-le-f32-v1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "component_id": "gdn_recurrent",
+          "ordinal": 1,
+          "layer_index": 2,
           "shape": [
             1,
             4,
@@ -126,9 +293,18 @@
         },
         {
           "component_id": "qsa_indexer_idx_block_pos",
-          "scope": {
-            "layer_index": 2
-          },
+          "ordinal": 0,
+          "layer_index": 2,
+          "shape": [],
+          "dtype": "i64",
+          "byte_order": "little",
+          "serialization": "canonical-le-i64-v1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        {
+          "component_id": "qsa_indexer_idx_block_pos",
+          "ordinal": 1,
+          "layer_index": 3,
           "shape": [],
           "dtype": "i64",
           "byte_order": "little",
@@ -137,9 +313,8 @@
         },
         {
           "component_id": "ple_prev_token",
-          "scope": {
-            "layer_index": null
-          },
+          "ordinal": 0,
+          "layer_index": null,
           "shape": [],
           "dtype": "u32",
           "byte_order": "little",
