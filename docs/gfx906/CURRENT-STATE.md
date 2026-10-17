@@ -19,6 +19,20 @@ PR #19 passed a separate, focused C++20 transaction test. The current main CPU s
 changes do not integrate AB/CD into the runtime, establish GPU overlap or
 parity, or change the published image.
 
+PR [#31](https://github.com/cassettesgoboom/strata-gfx906/pull/31) merged at
+`6cb3c586833966b48e4df77180552b42331e429c`. It replaces the watchdog release
+registry's raw `Verifier*` access with fixed-lifetime controls for publishing
+wait flags and draining the registered compute/copy streams. Stream query
+errors and timeouts are reported as failed drains. The deterministic C++ test
+is included in the hosted CPU workflow. Before merge, PR source commit
+`429d2a95ac12b753cc81fe3ace93f51bb2bf3f8c` compiled the full `strata` gfx906
+HIP target in an isolated 6 GiB container with no GPU devices; the output
+hash and toolchain are in the [build receipt](../../benchmarks/gfx906/receipts/2026-10-17-verifier-release-control-build.json).
+This is compile and CLI-help evidence only, not GPU runtime validation. The
+change does not resolve the separate raw diagnostic callback lifetime or
+general graph/session teardown contract, and it does not port AB/CD. Issue #24
+remains open.
+
 - **Source base:** upstream `296b59d2f73c8f04a805df29c2fa97655adace78`.
 - **Archived native binary:** SHA-256 `ae93901c79771ace15db52942523c25fc46dd6f0d6a3b43698b28e6071c472cb`.
 - **Archived OCI index:** `sha256:a7527bd8efe2dcdb0a0a7fd6b96761507ce79f9d585ce1649ce5b91158258a29`.

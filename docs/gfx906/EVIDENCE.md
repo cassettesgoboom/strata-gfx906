@@ -79,6 +79,23 @@ passes. The synthetic validator compares `diagnostic_records_equal` only and kee
 `runtime_parity_claim=false`. It validates comparator behavior on supplied diagnostic records; it does not
 authenticate runtime capture or establish token or persistent-state parity.
 
+## PR #31 verifier release-control build
+
+[PR #31](https://github.com/cassettesgoboom/strata-gfx906/pull/31) merged at
+`6cb3c586833966b48e4df77180552b42331e429c`. Its CPU regression exercises
+registered release, failed drain reporting, and deterministic bind/unbind
+overlap. PR source commit `429d2a95ac12b753cc81fe3ace93f51bb2bf3f8c`
+compiled the full `strata` target for gfx906 in a 6 GiB container with
+the public runtime image digest and pinned GGML revision listed in the
+[machine-readable build receipt](../../benchmarks/gfx906/receipts/2026-10-17-verifier-release-control-build.json).
+The binary SHA-256 is
+`2c537ac5b89e7b6ff549387dc6032c334d20a30e1e73bcdd21a07be1c1c6dcc6`, and its
+CLI help loaded in the build image. No GPU was passed to the build or used for
+a runtime smoke. This patch hardens only watchdog flag publication and the
+registered `cs_`/`copy_` drain. It does not establish complete verifier,
+graph, or session lifetime safety, integrate AB/CD, or provide token/state
+parity evidence.
+
 ## CPU-only AB/CD trace comparator
 
 [PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds a CPU-only comparator for supplied serial-OFF and AB/CD-ON native commit traces, with synthetic fixtures and fail-closed tests. The current v2 contract compares ordered native token IDs per committed window and persistent-state hashes at the end of that window; it also checks matched provenance and inputs, cache history, commit boundaries, and MTP decisions. Its output always sets `runtime_parity_claim` to `false`: matching JSON proves only that the supplied traces compare equal. It does not authenticate trace capture, establish runtime parity, run a model, validate GPU behavior, or port AB/CD to current main. See [the v2 contract](../../benchmarks/gfx906/fixtures/abcd-parity-contract-v2.json). V1 traces require regeneration or a migration justified by original transaction-boundary evidence.
