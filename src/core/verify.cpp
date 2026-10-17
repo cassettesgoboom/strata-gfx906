@@ -345,23 +345,43 @@ bool native_of(const WeightRef* w, const std::string& name, std::string& err) {
 }  // namespace
 
 namespace {
+// The release controls below pin only watchdog release publication and the registered cs_/copy_ drain. They do not
+// establish general teardown safety: g_diag_verifier still dereferences a raw Verifier*, direct
+// Verifier::release_gpu_waits() calls still require caller-owned Verifier lifetime synchronization, and other stream,
+// graph, or caller-owned SessionState lifetime remains outside this registration.
 std::atomic<const Verifier*> g_diag_verifier{nullptr};
 void diag_active_verifier(std::FILE* f) {
     if (const Verifier* v = g_diag_verifier.load()) v->diag(f);
 }
 // #267: every live verifier (a layer split has one per stage), for the release before the engine ends
 constexpr int kLiveMax = 16;
-std::atomic<Verifier*> g_live[kLiveMax];
-void release_live_verifiers(std::FILE* f) {
-    for (auto& slot : g_live)
-        if (Verifier* v = slot.load()) {
-            const Clock::time_point t0 = Clock::now();
-            const bool done = v->release_gpu_waits(5000);
-            if (f != nullptr)
-                std::fprintf(f, "strata: released the verify window's GPU waits (#267): the GPU %s\n",
-                             done ? ("finished in " + std::to_string((long long) ms_since(t0)) + " ms").c_str()
-                                  : "did not finish within 5 s");
+VerifyReleaseControl g_live[kLiveMax];
+bool drain_registered_verify_streams(void* stream, void* copy_stream, int device, int timeout_ms) {
+    _mm_sfence();   // the host stores above must be visible before querying for the released spin kernel
+    const OnDevice on_device(device);
+    const Clock::time_point t0 = Clock::now();
+    for (cudaStream_t s : {static_cast<cudaStream_t>(stream), static_cast<cudaStream_t>(copy_stream)}) {
+        if (s == nullptr) continue;
+        for (;;) {
+            const cudaError_t query = cudaStreamQuery(s);
+            if (query == cudaSuccess) break;
+            if (query != cudaErrorNotReady) return false;
+            if (ms_since(t0) > timeout_ms) return false;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
+    }
+    return true;
+}
+void release_live_verifiers(std::FILE* f) {
+    for (size_t i = 0; i < kLiveMax; ++i) {
+        bool registered = false;
+        const Clock::time_point t0 = Clock::now();
+        const bool done = g_live[i].release(5000, &registered);
+        if (f != nullptr && registered)
+            std::fprintf(f, "strata: released verify window slot %zu's GPU waits (#267): the GPU %s\n", i,
+                         done ? ("finished in " + std::to_string((long long) ms_since(t0)) + " ms").c_str()
+                              : "did not drain within 5 s (timeout or stream query error)");
+    }
     if (f != nullptr) std::fflush(f);
 }
 // #649: the host side of STRATA_VERIFY_TRACE - a ring of the last kTraceN handshake events of every verifier
@@ -391,20 +411,32 @@ const int64_t g_test_stall = [] {
 }  // namespace
 
 bool Verifier::release_gpu_waits(int timeout_ms) {
+    if (release_control_ != nullptr) {
+        trace_ev("RELEASE", -1, -1, timeout_ms);
+        const bool done = release_control_->release(timeout_ms);
+        trace_ev(done ? "RELEASE-DRAINED" : "RELEASE-NOT-DRAINED", -1, -1, timeout_ms);
+        return done;
+    }
     released_.store(true);
+    for (uint32_t* p : {h_flag_, h_flagA_, h_flagB_})
+        if (p != nullptr) *(volatile uint32_t*) p = UINT32_MAX;
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     trace_ev("RELEASE", -1, -1, timeout_ms);
     // the words the spin kernels read (wait_flag_ge, wait_flag_ge_or) are mapped host memory, so a store here
     // reaches them with no API call; UINT32_MAX is past every ring.  (E-6's skip words are device memory, but
     // wait_flag_ge_or also returns on its flag.)  A host function raising flag B later only raises.
-    for (uint32_t* p : {h_flag_, h_flagA_, h_flagB_})
-        if (p != nullptr) *(volatile uint32_t*) p = UINT32_MAX;
-    std::atomic_thread_fence(std::memory_order_seq_cst);
     _mm_sfence();
     const OnDevice on_device(device_);
     const Clock::time_point t0 = Clock::now();
     for (cudaStream_t s : {cs_, copy_}) {
         if (s == nullptr) continue;
-        while (cudaStreamQuery(s) == cudaErrorNotReady) {
+        for (;;) {
+            const cudaError_t query = cudaStreamQuery(s);
+            if (query == cudaSuccess) break;
+            if (query != cudaErrorNotReady) {
+                trace_ev("RELEASE-NOT-DRAINED", -1, -1, (int64_t) ms_since(t0));
+                return false;
+            }
             if (ms_since(t0) > timeout_ms) {
                 trace_ev("RELEASE-NOT-DRAINED", -1, -1, (int64_t) ms_since(t0));
                 return false;
@@ -414,6 +446,18 @@ bool Verifier::release_gpu_waits(int timeout_ms) {
     }
     trace_ev("RELEASE-DRAINED", -1, -1, (int64_t) ms_since(t0));   // aux: ms the GPU took to finish once released
     return true;
+}
+
+bool Verifier::register_release_control(std::string& err) {
+    if (release_control_ != nullptr) return true;
+    for (auto& slot : g_live)
+        if (slot.bind(&released_, h_flag_, h_flagA_, h_flagB_, cs_, copy_, device_,
+                      &drain_registered_verify_streams) == VerifyReleaseControl::BindStatus::bound) {
+            release_control_ = &slot;
+            return true;
+        }
+    err = "verify: watchdog release registry is full";
+    return false;
 }
 
 void Verifier::trace_ev(const char* what, int64_t step, int64_t layer, int64_t aux) const {
@@ -488,16 +532,16 @@ void Verifier::diag(std::FILE* f) const {
 
 
 Verifier::~Verifier() {
+    if (release_control_ != nullptr) {
+        release_control_->unbind();
+        release_control_ = nullptr;
+    }
 #if defined(STRATA_GPU_METAL)
     strata::metal_engine::window_destroy(metal_);
     metal_ = nullptr;
 #endif
     const Verifier* self = this;
     g_diag_verifier.compare_exchange_strong(self, nullptr);
-    for (auto& slot : g_live) {
-        Verifier* me = this;
-        slot.compare_exchange_strong(me, nullptr);
-    }
     if (cs_) cudaStreamSynchronize(cs_);
     if (sh_cs_) cudaStreamSynchronize(sh_cs_);
     for (auto& e : exec_)
@@ -558,10 +602,6 @@ bool Verifier::init(const WeightTable& wt, const ModelGeometry& g, SessionState&
                     const NativeHead* head, int max_t, std::string& err) {
     g_diag_verifier.store(this);
     diag_verify_fn().store(&diag_active_verifier);
-    for (auto& slot : g_live) {
-        Verifier* none = nullptr;
-        if (slot.load() == this || slot.compare_exchange_strong(none, this)) break;
-    }
     release_gpu_fn().store(&release_live_verifiers);
     cudaGetDevice(&device_);   // a layer split's stage on another GPU: its streams, graphs and buffers live there
     rr_stats_ = route_resident_cfg().stats_on(device_);   // STRATA_ROUTE_RESIDENT: this GPU's counters, outside graph capture
@@ -576,8 +616,10 @@ bool Verifier::init(const WeightTable& wt, const ModelGeometry& g, SessionState&
     sampling_.temperature = 0.0f;
 #if defined(STRATA_GPU_METAL)
     if (metal_ == nullptr) metal_ = strata::metal_engine::window_create();
-    return strata::metal_engine::window_init(metal_, g, ss, max_t, ss.qsa_states[ss.qsa_primary()].max_cells, &n_vocab_,
-                                             err);
+    if (!strata::metal_engine::window_init(metal_, g, ss, max_t, ss.qsa_states[ss.qsa_primary()].max_cells,
+                                           &n_vocab_, err))
+        return false;
+    return register_release_control(err);
 #endif
     if (max_t < 2 || max_t > strata::kernels::kVerifyMaxT || max_t > strata::kernels::cpu::MAXT) {
         err = "verify: the window must hold 2.." + std::to_string(strata::kernels::kVerifyMaxT) + " tokens";
@@ -843,7 +885,9 @@ bool Verifier::init(const WeightTable& wt, const ModelGeometry& g, SessionState&
     std::fprintf(stderr, "strata verify: window up to %d tokens, %.1f MiB of device buffers%s\n", max_t,
                  (double) count.used / 1048576.0,
                  all_resident_ ? " (100% VRAM resident: zero-doorbell graph)" : "");
-    return true;
+    // Init's fused_gr_check self-test uses its own temporary stream and no verifier wait flags. Register only once
+    // this verifier's mapped flags and streams are complete; verifier spin-wait graphs launch after init returns.
+    return register_release_control(err);
 }
 
 const float* Verifier::final_R(int t) const { return R_ + (size_t) t * (size_t) (g_->hc * g_->n_embd); }

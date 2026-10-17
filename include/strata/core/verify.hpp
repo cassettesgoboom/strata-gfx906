@@ -26,6 +26,7 @@
 #include "strata/core/expert_source.hpp"
 #include "strata/core/layer.hpp"
 #include "strata/core/session.hpp"
+#include "strata/core/verify_release.hpp"
 #include "strata/kernels/sampler.hpp"
 
 #include <cuda_runtime.h>
@@ -92,7 +93,8 @@ public:
     /// #267: raise every flag the window's spin kernels wait on past any ring (UINT32_MAX), so a window the GPU
     /// cannot finish drains instead of staying resident, then wait up to `timeout_ms` for its streams.  For the
     /// paths that give up on the engine (a timed-out window, the serve watchdog): the window then ran on whatever
-    /// the flags guarded, so this verifier refuses every later window.  True when the streams finished.
+    /// the flags guarded, so this verifier refuses every later window. True when streams finished. Direct calls
+    /// require the caller to keep this Verifier alive; the global watchdog uses its pinned release control instead.
     bool release_gpu_waits(int timeout_ms);
 
     /// `max_t` <= kVerifyMaxT.  `head` may be null (the canonical head is then run per token).
@@ -316,6 +318,7 @@ public:
     std::string profile_report();
 
 private:
+    bool register_release_control(std::string& err);
     /// The one currently supported verifier window context. Serial, pipeline, and batch paths share this record;
     /// grouping its metadata does not provide concurrent-window or AB/CD scratch isolation.
     struct WindowContext {
@@ -406,6 +409,7 @@ private:
     int device_ = -1;                    ///< the device `init` ran on: run/commit switch to it (layer split)
     unsigned long long* rr_stats_ = nullptr;   ///< STRATA_ROUTE_RESIDENT's counters on device_ (#1578); null: none
     std::atomic<bool> released_{false};  ///< #267: release_gpu_waits ran (maybe on the watchdog thread): no more windows
+    VerifyReleaseControl* release_control_ = nullptr;  ///< fixed-lifetime watchdog registration; null before init completes
     bool all_resident_ = false;           ///< 100% of experts in [lb_, le_) resident in VRAM: zero-doorbell graph
     /// #871: the zero-doorbell graph plans from the device residency table alone, so it is only right while every
     /// expert of the stage is in VRAM.  A prompt loan, a VRAM shrink or an adaptive swap marks some -1 for a while:
