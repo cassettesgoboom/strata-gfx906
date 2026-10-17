@@ -67,15 +67,19 @@ parity, or change the published image.
   client/native completion counts of 146 and 130. MTP accepted/offered counts were 96/118 and 76/88. The initial
   native-log collection attempt was corrected by repeating the short requests inside the same candidate. This
   receipt covers trace accounting only: it is not an AB/CD comparison, state-parity check, or throughput benchmark.
+  The model-backed raw trace remains private, so this sanitized receipt is not independently reproducible. The
+  copied build source had no Git metadata; the tested binary is identified by its PR #26 source association and
+  hash, but an exact post-merge whole-tree build identity is unproven.
   See the [sanitized receipt](../../benchmarks/gfx906/receipts/2026-10-17-pr26-serial-smoke.json).
 - **Current source:** upstream v0.1.44.1 already includes gfx906, K8/V4, and serial batch-MTP paths; see
   [the dated upstream map](UPSTREAM-DELTA.md). A pre-merge source-equivalent build has a short serial GPU smoke.
   At the earlier 2026-10-17 checkpoint (SHA `73e01b3a5f1c577899e3f668e7e913759a1f7455`), no build or GPU smoke
   was recorded for post-merge main. PR #22 subsequently built source commit `22cae852bbbe433c1cdf65ab4daaef7bfeaf650d`,
   but there is still no GPU runtime result for that refactor or the merged main commit. PR #25/#26 add trace
-  instrumentation; PR #26 now has the separate short serial smoke described above, but there is no current-main
-  GPU smoke. Current main has not passed
-  batch AB/CD or parity validation, and is not validated by archived binary results.
+  instrumentation; PR #26 now has the separate short serial smoke described above. Its copied build source had
+  no Git metadata, so the smoke does not prove an exact post-merge whole-tree build identity. No GPU smoke has
+  a proven exact post-merge whole-tree source identity, and there is no current-main AB/CD or parity validation.
+  The current-main tree is not validated by archived binary results.
   [Draft PR #4](https://github.com/cassettesgoboom/strata-gfx906/pull/4) preserves a privacy-adapted historical
   AB/CD source candidate against v0.1.41 for review only. PR #17 supplies a CPU transaction-trace comparison
   contract but does not port that candidate to current main, reproduce the archived executable, or pass runtime

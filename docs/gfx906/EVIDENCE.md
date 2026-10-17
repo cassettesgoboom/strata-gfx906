@@ -64,7 +64,11 @@ the newer binary overmounted. No new image was built or published. The repeated 
 146 and 130 client/native completion counts. MTP accepted/offered counts were 96/118 and 76/88. An initial
 native-log collection attempt was corrected by repeating the short requests inside the same candidate; only the
 corrected trace accounting is summarized here. This is not a throughput benchmark, AB/CD comparison, or state
-parity result, and it must not be pooled with the archived throughput evidence.
+parity result, and it must not be pooled with the archived throughput evidence. The model-backed raw trace remains
+private, so this sanitized receipt is not independently reproducible. The copied build source had no Git metadata:
+the tested binary is identified by its PR #26 source association and hash, but the exact post-merge whole-tree
+build identity is unproven. No GPU smoke has a proven exact post-merge whole-tree source identity, and no
+current-main AB/CD or parity validation is established.
 
 ## PR #29 synthetic state-checkpoint validator
 

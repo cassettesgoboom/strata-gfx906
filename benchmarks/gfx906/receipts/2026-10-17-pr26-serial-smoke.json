@@ -4,7 +4,10 @@
   "classification": "short serial GPU smoke; trace accounting only, not a benchmark or parity test",
   "source": {
     "pr": 26,
-    "native_sha256": "68b582aeee55707082b0db49c3cdc7ae3e464c515a651e3ed758cfb628c92594"
+    "native_sha256": "68b582aeee55707082b0db49c3cdc7ae3e464c515a651e3ed758cfb628c92594",
+    "copied_build_source_had_git_metadata": false,
+    "exact_post_merge_whole_tree_identity_proven": false,
+    "scope_note": "Binary is associated with PR 26 by source association and hash; no exact post-merge whole-tree build identity is proven."
   },
   "distribution": {
     "base_runtime_index_digest": "sha256:a7527bd8efe2dcdb0a0a7fd6b96761507ce79f9d585ce1649ce5b91158258a29",
@@ -46,9 +49,15 @@
     "runtime_parity_claim": false
   },
   "capture_note": "An initial native-log collection attempt was corrected by repeating the short requests inside the same candidate; this receipt summarizes the corrected trace accounting only.",
+  "raw_trace": {
+    "model_backed_trace_private": true,
+    "independently_reproducible_from_sanitized_receipt": false
+  },
   "limitations": [
     "This is a short serial smoke, not a throughput benchmark.",
     "The run does not compare AB/CD execution or establish token or recurrent-state parity.",
+    "The raw model-backed trace remains private, and the sanitized receipt does not permit independent reproduction.",
+    "The copied build source had no Git metadata, so exact post-merge whole-tree source identity is unproven.",
     "The newer native binary was overmounted on the archived runtime base; the archived image contents were not replaced."
   ]
 }
