@@ -14,6 +14,7 @@
       "source_commit", "binary_sha256", "model_sha256", "tokenizer_sha256",
       "mtp_sha256", "command_sha256", "device_and_runtime", "trace_capture_method"
     ],
+    "command_sha256": "Compute this digest from the normalized effective command identity: retain all request inputs and effective options, removing only the STRATA_BATCH_ABCD OFF/ON setting (serial unset or 0; candidate 1). The trace producer performs this normalization; the comparator validates SHA-256 syntax and exact equality but cannot establish how the digest was computed.",
     "matched_request_fields": [
       "request_id", "cache_key_sha256", "cache_reused_tokens", "cache_fresh_tokens",
       "input_token_count", "input_token_tail_ids", "input_token_ids_sha256", "sampler_state_sha256", "initial_checkpoint"
