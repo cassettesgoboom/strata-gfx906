@@ -1,0 +1,2 @@
+# Pinned CPU test dependency for executable Draft 2020-12 fixture validation.
+jsonschema==4.26.0

@@ -186,8 +186,7 @@
               "component_id": {
                 "const": "gdn_recurrent"
               }
-            },
-            "additionalProperties": false
+            }
           },
           "minContains": 1,
           "maxContains": 1
@@ -202,8 +201,7 @@
               "component_id": {
                 "const": "qsa_indexer_idx_block_pos"
               }
-            },
-            "additionalProperties": false
+            }
           },
           "minContains": 1,
           "maxContains": 1
@@ -218,8 +216,7 @@
               "component_id": {
                 "const": "ple_prev_token"
               }
-            },
-            "additionalProperties": false
+            }
           },
           "minContains": 1,
           "maxContains": 1

@@ -23,6 +23,8 @@ review must verify those artifacts, source/build identity, and the claimed metri
 The committed synthetic fixture is deliberately rejected as real run evidence. The CPU test suite and
 GitHub-hosted workflow check that rejection and the validator's false-positive cases without privileged devices or
 model weights. Run `python tools/gfx906.py test-cpu` locally before submitting a PR.
+The state-trace fixture tests execute the Draft 2020-12 schema using the pinned dependency in
+[`tests/gfx906/requirements-schema.txt`](../../tests/gfx906/requirements-schema.txt); install it before running the CPU test suite.
 
 For cached performance, declare `cache_state=cached` only when the native reused-token count is at least 98% of
 the exact tokenized prompt. The validator requires a prompt hash and reused/fresh counts. For a strict concurrent

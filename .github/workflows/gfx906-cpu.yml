@@ -62,6 +62,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      - name: Install pinned JSON Schema test dependency
+        run: python -m pip install -r tests/gfx906/requirements-schema.txt
       - name: CPU-only tests
         run: python tools/gfx906.py test-cpu
       - name: Install pinned service test dependencies

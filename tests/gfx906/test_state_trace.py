@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from copy import deepcopy
 from pathlib import Path
+from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("gfx906_state_trace", ROOT / "tools/gfx906_state_trace.py")
@@ -113,8 +114,9 @@ class StateTraceTests(unittest.TestCase):
             if isinstance(node, dict):
                 if node.get("type") == "object":
                     self.assertIs(node.get("additionalProperties"), False)
-                for value in node.values():
-                    walk(value)
+                for key, value in node.items():
+                    if key != "contains":
+                        walk(value)
             elif isinstance(node, list):
                 for value in node:
                     walk(value)
@@ -162,14 +164,20 @@ class StateTraceTests(unittest.TestCase):
     def test_schema_requires_exactly_one_range_for_each_state_kind(self):
         schema = json.loads((FIXTURES / "native-state-trace-v1.schema.json").read_text())
         ranges = schema["properties"]["layer_ranges"]
+        self.assertIs(ranges["items"]["additionalProperties"], False)
         self.assertEqual(ranges["minItems"], 3)
         self.assertEqual(ranges["maxItems"], 3)
         self.assertTrue(all(rule["minContains"] == 1 and rule["maxContains"] == 1 for rule in ranges["allOf"]))
         kinds = [rule["contains"]["properties"]["component_id"]["const"] for rule in ranges["allOf"]]
         self.assertEqual(set(kinds), state_trace.COMPONENT_KINDS)
         self.assertIn("Cross-record joins enforced procedurally", schema["$comment"])
+        validator = Draft202012Validator(schema)
+        validator.check_schema(schema)
+        validator.validate(self.serial)
+        validator.validate(self.candidate)
         changed = deepcopy(self.serial)
         changed["layer_ranges"][2]["component_id"] = "gdn_recurrent"
+        self.assertFalse(validator.is_valid(changed))
         self.assertTrue(any("duplicate layer range" in error for error in state_trace.validate_trace(changed)))
 
     def test_input_and_expansion_limits_fail_before_unbounded_work(self):

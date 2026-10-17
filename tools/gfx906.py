@@ -512,7 +512,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("doctor", help="inspect CPU-side tool availability; never accesses GPUs")
     p.set_defaults(func=cmd_doctor)
-    p = sub.add_parser("test-cpu", help="run stdlib CPU-only tests")
+    p = sub.add_parser("test-cpu", help="run CPU-only tooling regression tests")
     p.set_defaults(func=cmd_test_cpu)
     p = sub.add_parser("bench-validate", help="validate benchmark evidence JSON")
     p.add_argument("paths", nargs="*", help="JSON record paths")
