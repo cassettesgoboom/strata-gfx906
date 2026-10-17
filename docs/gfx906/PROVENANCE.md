@@ -15,7 +15,14 @@ The [Docker Hub tag API](https://hub.docker.com/v2/namespaces/cassettesgoboom/re
 
 ## Source relationship
 
-The experimental image was built from v0.1.41 experimental source. The supplied native SHA is recorded as a separate native artifact identifier; public tag metadata does not establish that it is an image-layer checksum or that it corresponds to the container. The build is not currently reproducible from upstream HEAD `296b59d2f73c8f04a805df29c2fa97655adace78`. Do not claim that the current public source fork reproduces the image.
+The archived image is recorded as v0.1.41 experimental source, with upstream commit
+`296b59d2f73c8f04a805df29c2fa97655adace78` as its source baseline. That is an archived baseline, not current
+upstream HEAD. The supplied native SHA is recorded as a separate native artifact identifier; public tag metadata
+does not establish that it is an image-layer checksum or that it corresponds to the container. As of the public
+state check on 2026-10-17, the available records do not establish a coherent source tree that reproduces the
+archived binary or a reproduction from the fork source snapshot reviewed at `af45b70bf5cb7e61a0e0825c632397190a97e18b` or current
+upstream main `477ac13cbe8e582c20484871ce459d20d82df09d`. Do not claim that the current public source fork
+reproduces the image.
 
 The public fork's [PR #11](https://github.com/cassettesgoboom/strata-gfx906/pull/11) adds an archived MI50 measurements table to the README; [PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds CPU-only synthetic trace comparison tooling. Neither PR changes the engine, container, tag, or image digest above. The comparator's successful comparison is not runtime parity evidence and does not update the archived image's provenance.
 
