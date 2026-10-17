@@ -4,10 +4,11 @@ import os
 import queue
 import threading
 import unittest
+from collections import deque
 from unittest import mock
 
 from serve import native_trace
-from serve.server import StrataEngine
+from serve.server import Service, StrataEngine
 
 
 class NativeTraceProtocol(unittest.TestCase):
@@ -68,6 +69,31 @@ class NativeTraceProtocol(unittest.TestCase):
                 next(gen)
         eng._take_control.assert_not_called()
 
+    def test_request_id_is_lazy_and_monitor_ids_keep_their_length(self):
+        svc = object.__new__(Service)
+        svc.api_monitor = False
+        svc.request_trace = threading.local()
+        with mock.patch.dict(os.environ, {}, clear=True), mock.patch("serve.server.uuid.uuid4") as uuid4:
+            self.assertIsNone(svc.begin_request("/v1/chat/completions", {}))
+        uuid4.assert_not_called()
+        self.assertIsNone(svc.request_trace.id)
+
+        with mock.patch.dict(os.environ, {native_trace.TRACE_ENV: "1"}), \
+                mock.patch("serve.server.uuid.uuid4") as uuid4:
+            uuid4.return_value.hex = "f" * 32
+            self.assertIsNone(svc.begin_request("/v1/chat/completions", {}))
+        self.assertEqual(svc.request_trace.id, "f" * 32)
+
+        svc.api_monitor = True
+        svc.model = "model"
+        svc.status_lock = threading.Lock()
+        svc.api_requests = deque(maxlen=100)
+        with mock.patch.dict(os.environ, {}, clear=True), mock.patch("serve.server.uuid.uuid4") as uuid4:
+            uuid4.return_value.hex = "e" * 32
+            record = svc.begin_request("/v1/chat/completions", {})
+        self.assertEqual(record["id"], "e" * 12)
+        self.assertEqual(svc.request_trace.id, "e" * 32)
+
     def test_legacy_mode_adds_no_field(self):
         with mock.patch.dict(os.environ, {}, clear=True):
             self.assertFalse(native_trace.enabled())
@@ -83,7 +109,8 @@ class NativeTraceProtocol(unittest.TestCase):
         self.assertNotIn(left, msg)
         self.assertNotIn("prompt", msg)
         self.assertNotIn("secret prompt text", msg)
-        self.assertIn("state=complete", msg)
+        self.assertIn("state=native_leg_complete", msg)
+        self.assertNotIn("logical_complete", msg)
         self.assertIn("produced=4", msg)
         self.assertIn(left, ledger.complete(left, 0, "length", 8))
 

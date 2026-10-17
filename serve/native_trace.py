@@ -62,4 +62,5 @@ class ActiveRequests:
             raise ValueError("missing or mismatched correctness trace request ID")
         del self._active[request_id]
         # Deliberately excludes prompt, generated text, and token IDs.
-        return f"strata correctness: request={request_id} slot={slot} state=complete finish={finish} produced={produced}"
+        return (f"strata correctness: request={request_id} slot={slot} state=native_leg_complete "
+                f"finish={finish} produced={produced}")

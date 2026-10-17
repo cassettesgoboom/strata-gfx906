@@ -3619,7 +3619,7 @@ class Service:
 
     def begin_request(self, path, req):
         """#332: a monitor record for this request, or None when the monitor is off (nothing is kept then)."""
-        request_id = uuid.uuid4().hex
+        request_id = uuid.uuid4().hex if self.api_monitor or native_trace.enabled() else None
         self.request_trace.id = request_id
         if not self.api_monitor:
             return None
