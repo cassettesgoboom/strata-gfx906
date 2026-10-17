@@ -14,8 +14,8 @@ v1 record format with ordered token vectors per committed transaction/window and
 PR [#15](https://github.com/cassettesgoboom/strata-gfx906/pull/15) adds an unused host-side transaction lifecycle
 registry; [#19](https://github.com/cassettesgoboom/strata-gfx906/pull/19) adds two-phase commit intent/result,
 accepted-prefix validation and copy, and explicit drain/recovery gates to that CPU contract. The registry remains
-unused by the runtime. At the PR #19 checkpoint, `python tools/gfx906.py test-cpu` passed 44 Python tests and
-PR #19 passed a separate, focused C++20 transaction test. The current main CPU suite passes 60 tests. These
+unused by the runtime. At the PR #19 checkpoint, `python tools/gfx906.py test-cpu` passed 44 Python tests, the
+focused C++20 transaction test passed, and the main CPU suite had 60 tests. These
 changes do not integrate AB/CD into the runtime, establish GPU overlap or
 parity, or change the published image.
 
@@ -69,11 +69,13 @@ remains open.
   GPU smoke, documented below. The smoke is trace-accounting evidence only; it is not an AB/CD comparison,
   token/state parity result, or new image build.
 - **PR #29 synthetic state-checkpoint validator:** PR [#29](https://github.com/cassettesgoboom/strata-gfx906/pull/29)
-  merged in main at `a9e6712c`. It adds a synthetic state-checkpoint validator. The CPU suite passes 60 tests.
+  merged in main at `a9e6712c`. It adds a synthetic state-checkpoint validator. The suite had 60 tests at that revision.
   The validator compares `diagnostic_records_equal` only and emits `runtime_parity_claim=false`; synthetic equality
   validates the diagnostic comparison path, not runtime state parity or capture authenticity.
-- **V3 native state-trace contract:** the checked-in v3 schema and CPU comparator add an initial prompt/cache
-  checkpoint plus absolute commit boundaries for ordered native token IDs and model-declared GDN, QSA, PLE, and MTP
+- **V3 native state-trace contract:** the checked-in [v3 contract](../../benchmarks/gfx906/fixtures/native-runtime-parity-contract-v3.json),
+  [trace schema](../../benchmarks/gfx906/fixtures/native-runtime-parity-trace-v3.schema.json), and
+  [CPU comparator](../../tests/gfx906/runtime_parity_v3.py) add an initial prompt/cache checkpoint plus absolute
+  commit boundaries for ordered native token IDs and model-declared GDN, QSA, PLE, and MTP
   state. Tests cover prompt-tail and rolling PLE predecessor IDs, accepted MTP prefixes, exact mode-specific state
   fields, component serialization descriptors, bounded trace loading, and architecture-derived inventories. All
   fixtures are synthetic and output keeps `runtime_parity_claim=false`; this does not authenticate capture or digest
