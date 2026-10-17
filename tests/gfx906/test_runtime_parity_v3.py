@@ -28,7 +28,7 @@ class RuntimeParityV3Tests(unittest.TestCase):
         self.assertEqual(result["state_comparison_boundary"], "absolute_committed_position_interval_end")
         self.assertIn("cannot authenticate capture", result["warning"])
 
-    def test_normalized_command_digest_must_match_across_toggle(self):
+    def test_command_digest_mismatch_is_rejected(self):
         changed = deepcopy(self.candidate)
         changed["provenance"]["command_sha256"] = "f" * 64
         self.assertIn("provenance.command_sha256 differs",
