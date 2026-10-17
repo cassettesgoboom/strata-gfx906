@@ -1,6 +1,6 @@
 # gfx906 current state
 
-**Recorded:** 2026-10-17. **Stage:** public gfx906 foundation and current-main build fixes are merged. PR
+**Recorded:** 2026-10-18. **Stage:** public gfx906 foundation and current-main build fixes are merged. PR
 [#22](https://github.com/cassettesgoboom/strata-gfx906/pull/22) merged a mechanical single-window
 `Verifier::WindowContext` refactor. Its source commit passed an isolated gfx906 HIP build and CLI load, and
 both hosted CPU checks passed. PR [#25](https://github.com/cassettesgoboom/strata-gfx906/pull/25) merged
@@ -33,7 +33,18 @@ change does not resolve the separate raw diagnostic callback lifetime or
 general graph/session teardown contract, and it does not port AB/CD. Issue #24
 remains open.
 
-**Public source snapshot (checked 2026-10-17 UTC):** the reviewed fork `main` was
+**Current fork main (checked 2026-10-18):**
+[`78de7f56e5977ed351d147155cbc4af1696a553c`](https://github.com/cassettesgoboom/strata-gfx906/commit/78de7f56e5977ed351d147155cbc4af1696a553c).
+Since the reviewed engine-source snapshot below, PR [#37](https://github.com/cassettesgoboom/strata-gfx906/pull/37)
+refreshed public state and provenance, PR [#38](https://github.com/cassettesgoboom/strata-gfx906/pull/38)
+clarified the synthetic v3 command-identity contract, and PR
+[#39](https://github.com/cassettesgoboom/strata-gfx906/pull/39) redacted local roots from three benchmark
+configuration snapshots. These commits change documentation, parity-contract/tests, or benchmark configuration
+records; they do not add a native AB/CD runtime port or new GPU/parity evidence. Fork main remains based on
+[upstream `Niko1221/Strata`](https://github.com/Niko1221/Strata), and the latest upstream release checked here is
+[v0.1.45](https://github.com/Niko1221/Strata/releases/tag/v0.1.45).
+
+**Reviewed engine-source snapshot (checked 2026-10-17 UTC):** the reviewed fork `main` at that source review was
 [`af45b70bf5cb7e61a0e0825c632397190a97e18b`](https://github.com/cassettesgoboom/strata-gfx906/commit/af45b70bf5cb7e61a0e0825c632397190a97e18b),
 with [PR #36](https://github.com/cassettesgoboom/strata-gfx906/pull/36) just merged. This update changes docs only
 and does not change engine source. Upstream's
