@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "receipt_id": "2026-10-17-verifier-release-control-build",
+  "source": {
+    "repository": "https://github.com/cassettesgoboom/strata-gfx906",
+    "commit": "429d2a95ac12b753cc81fe3ace93f51bb2bf3f8c",
+    "dirty": false
+  },
+  "target": {
+    "architecture": "gfx906"
+  },
+  "toolchain": {
+    "compiler": "AMD clang",
+    "compiler_version": "23.0.0git",
+    "rocm_version": "7.14.60850-0000000",
+    "components": [
+      {
+        "name": "builder image",
+        "version": "cassettesgoboom/strata-gfx906",
+        "revision": "sha256:cff67a01ce2365a93a3b43a6e46694da3a28cfb7daf229fae5180ab92dc2295a"
+      },
+      {
+        "name": "GGML/llama.cpp",
+        "version": "0.24.0",
+        "revision": "3cf03257f219afbe7334045ff7c6a06ac68c627d"
+      },
+      {
+        "name": "CMake",
+        "version": "3.28.3"
+      },
+      {
+        "name": "Ninja",
+        "version": "1.11.1"
+      }
+    ]
+  },
+  "build": {
+    "system": "Linux build container; memory limit 6 GiB; no GPU devices passed; source and GGML mounts read-only",
+    "generator": "Ninja",
+    "configuration": "Release",
+    "options": {
+      "STRATA_ENABLE_CUDA": true,
+      "STRATA_HIP_GFX906": true,
+      "CMAKE_HIP_ARCHITECTURES": "gfx906",
+      "STRATA_GGML_DIR": "/src/llama.cpp",
+      "CMAKE_C_COMPILER": "/opt/rocm/llvm/bin/clang",
+      "CMAKE_CXX_COMPILER": "/opt/rocm/llvm/bin/clang++",
+      "container_memory_limit_bytes": 6442450944,
+      "gpu_access": false
+    },
+    "command": "apt-get install cmake ninja-build; cmake -S /src/strata -B /build -G Ninja -DSTRATA_ENABLE_CUDA=ON -DSTRATA_HIP_GFX906=ON -DCMAKE_HIP_ARCHITECTURES=gfx906 -DSTRATA_GGML_DIR=/src/llama.cpp -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++; ninja -C /build -j2 strata",
+    "exit_code": 0
+  },
+  "artifact": {
+    "name": "strata gfx906 build-only runtime binary",
+    "sha256": "2c537ac5b89e7b6ff549387dc6032c334d20a30e1e73bcdd21a07be1c1c6dcc6",
+    "size_bytes": 26237840
+  }
+}
