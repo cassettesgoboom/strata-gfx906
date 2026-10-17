@@ -5,8 +5,9 @@
 `Verifier::WindowContext` refactor. Its source commit passed an isolated gfx906 HIP build and CLI load, and
 both hosted CPU checks passed. PR [#25](https://github.com/cassettesgoboom/strata-gfx906/pull/25) merged
 opt-in request-ID/native-leg correlation; its changed native parser passed an isolated gfx906 HIP build and
-both hosted CPU checks passed. A separate pre-merge source-equivalent binary passed a short serial MI50 GPU
-smoke. PR [#11](https://github.com/cassettesgoboom/strata-gfx906/pull/11) adds archived MI50 measurements.
+both hosted CPU checks passed. PR [#26](https://github.com/cassettesgoboom/strata-gfx906/pull/26) adds a
+separate opt-in serial-window trace; the base request-ID trace still supports batch. A separate pre-merge
+source-equivalent binary passed a short serial MI50 GPU smoke. PR [#11](https://github.com/cassettesgoboom/strata-gfx906/pull/11) adds archived MI50 measurements.
 PR [#12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) introduced a CPU-only AB/CD trace
 comparator; [#17](https://github.com/cassettesgoboom/strata-gfx906/pull/17) supersedes its
 v1 record format with ordered token vectors per committed transaction/window and state hashes at window end.
@@ -39,19 +40,24 @@ parity, or change the published image.
   44-test CPU suite and both hosted CPU checks passed. This is compile and CLI evidence only: there was no
   GPU runtime test or inference, no two-slice AB/CD isolation, no token or recurrent-state parity check, and
   no new image publication. The PR comment records the build details.
-- **PR #25 native trace build:** the merged opt-in request-ID/native-leg correlation change passed an isolated
-  gfx906 HIP build. The resulting native binary SHA-256 is
-  `c3aebb611d91f104786b6b8bc5773977727ed12be6fafa44064c8c14b76566ca`; it was built with llama.cpp commit
+- **PR #25 native trace build:** opt-in request-ID transport/native-leg correlation passed an isolated gfx906
+  HIP build. Its native binary SHA-256 is
+  `c3aebb611d91f104786b6b8bc5773977727ed12be6fafa44064c8c14b76566ca`, built with llama.cpp commit
   `3cf03257f219afbe7334045ff7c6a06ac68c627d` in build image
   `sha256:06c8bd0e6ede3614ad3467a056cce06e111ca854e3c7251cc0a140e89c9c32fb`. Both hosted CPU checks passed.
-  This is compile and CPU-check evidence only: no model-backed native protocol test, GPU runtime smoke, token or
-  recurrent-state parity, AB/CD port, new Docker image, or current-main GPU smoke is recorded.
+  This did not include a model-backed native protocol test, GPU runtime smoke, token or recurrent-state parity,
+  an AB/CD port, a new image, or a current-main GPU smoke.
+- **PR #26 serial-window trace build:** the separate `STRATA_CORRECTNESS_WINDOW_TRACE=1` opt-in serial-window
+  trace passed an isolated gfx906 HIP compile, producing native binary SHA-256
+  `68b582aeee55707082b0db49c3cdc7ae3e464c515a651e3ed758cfb628c92594`. Both hosted CPU checks passed. The
+  base request-ID trace continues to support batch requests. This is compile and CPU-check evidence only: no
+  model-backed capture, GPU runtime smoke, token parity, recurrent-state hash comparison, or new image is recorded.
 - **Current source:** upstream v0.1.44.1 already includes gfx906, K8/V4, and serial batch-MTP paths; see
   [the dated upstream map](UPSTREAM-DELTA.md). A pre-merge source-equivalent build has a short serial GPU smoke.
   At the earlier 2026-10-17 checkpoint (SHA `73e01b3a5f1c577899e3f668e7e913759a1f7455`), no build or GPU smoke
   was recorded for post-merge main. PR #22 subsequently built source commit `22cae852bbbe433c1cdf65ab4daaef7bfeaf650d`,
-  but there is still no GPU runtime result for that refactor or the merged main commit. PR #25 also has no
-  model-backed native protocol test or current-main GPU smoke. Current main has not passed
+  but there is still no GPU runtime result for that refactor or the merged main commit. PR #25/#26 add trace
+  instrumentation, but no model-backed capture or current-main GPU smoke. Current main has not passed
   batch AB/CD or parity validation, and is not validated by archived binary results.
   [Draft PR #4](https://github.com/cassettesgoboom/strata-gfx906/pull/4) preserves a privacy-adapted historical
   AB/CD source candidate against v0.1.41 for review only. PR #17 supplies a CPU transaction-trace comparison

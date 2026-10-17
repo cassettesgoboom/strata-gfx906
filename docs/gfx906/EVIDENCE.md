@@ -41,8 +41,17 @@ native-leg correlation for future correctness traces. Its isolated gfx906 HIP bu
 SHA-256 `c3aebb611d91f104786b6b8bc5773977727ed12be6fafa44064c8c14b76566ca`, using llama.cpp commit
 `3cf03257f219afbe7334045ff7c6a06ac68c627d` and build image
 `sha256:06c8bd0e6ede3614ad3467a056cce06e111ca854e3c7251cc0a140e89c9c32fb`. Both hosted CPU checks passed.
-This does not include a model-backed native protocol test, GPU runtime smoke, token or recurrent-state parity,
-an AB/CD port, a new Docker image, or a current-main GPU smoke.
+This did not include a model-backed native protocol test, GPU runtime smoke, token or recurrent-state parity,
+an AB/CD port, a new image, or a current-main GPU smoke.
+
+## PR #26 opt-in serial-window trace build
+
+[PR #26](https://github.com/cassettesgoboom/strata-gfx906/pull/26) adds a separate
+`STRATA_CORRECTNESS_WINDOW_TRACE=1` serial-window trace mode; the base request-ID trace continues to support
+batch requests. The isolated gfx906 HIP compile produced native binary SHA-256
+`68b582aeee55707082b0db49c3cdc7ae3e464c515a651e3ed758cfb628c92594`. Both hosted CPU checks passed. This
+does not establish model-backed capture, GPU runtime behavior, token parity, recurrent-state hash parity, or
+publication of a new image.
 
 ## CPU-only AB/CD trace comparator
 
