@@ -33,6 +33,17 @@ change does not resolve the separate raw diagnostic callback lifetime or
 general graph/session teardown contract, and it does not port AB/CD. Issue #24
 remains open.
 
+**Public repository snapshot (checked 2026-10-17 UTC):** fork `main` is
+[`f54111839951c0d7f64630064f840b359507fd01`](https://github.com/cassettesgoboom/strata-gfx906/commit/f54111839951c0d7f64630064f840b359507fd01),
+and [PR #35](https://github.com/cassettesgoboom/strata-gfx906/pull/35) is its latest merged PR. Upstream's
+latest official release is [v0.1.45](https://github.com/Niko1221/Strata/releases/tag/v0.1.45); its tag and
+current [`main`](https://github.com/Niko1221/Strata/commit/477ac13cbe8e582c20484871ce459d20d82df09d)
+resolve to `477ac13cbe8e582c20484871ce459d20d82df09d`. Fork draft [PR #4](https://github.com/cassettesgoboom/strata-gfx906/pull/4)
+and [issues #1](https://github.com/cassettesgoboom/strata-gfx906/issues/1) and
+[#24](https://github.com/cassettesgoboom/strata-gfx906/issues/24) remain open; upstream [PR #1242](https://github.com/Niko1221/Strata/pull/1242)
+and [PR #1253](https://github.com/Niko1221/Strata/pull/1253) remain open. These public revision and status facts do
+not add GPU or parity validation.
+
 - **Source base:** upstream `296b59d2f73c8f04a805df29c2fa97655adace78`.
 - **Archived native binary:** SHA-256 `ae93901c79771ace15db52942523c25fc46dd6f0d6a3b43698b28e6071c472cb`.
 - **Archived OCI index:** `sha256:a7527bd8efe2dcdb0a0a7fd6b96761507ce79f9d585ce1649ce5b91158258a29`.
@@ -94,14 +105,18 @@ remains open.
   copied build source had no Git metadata; the tested binary is identified by its PR #26 source association and
   hash, but an exact post-merge whole-tree build identity is unproven.
   See the [sanitized receipt](../../benchmarks/gfx906/receipts/2026-10-17-pr26-serial-smoke.json).
-- **Current source:** upstream v0.1.44.1 already includes gfx906, K8/V4, and serial batch-MTP paths; see
-  [the dated upstream map](UPSTREAM-DELTA.md). A pre-merge source-equivalent build has a short serial GPU smoke.
+- **Current upstream release and branch:** the latest official release is v0.1.45, and its tag and current
+  upstream `main` resolve to `477ac13cbe8e582c20484871ce459d20d82df09d`. The dated feature map in
+  [UPSTREAM-DELTA.md](UPSTREAM-DELTA.md) records the gfx906, K8/V4, and serial batch-MTP source history. A
+  pre-merge source-equivalent build has a short serial GPU smoke.
   At the earlier 2026-10-17 checkpoint (SHA `73e01b3a5f1c577899e3f668e7e913759a1f7455`), no build or GPU smoke
   was recorded for post-merge main. PR #22 subsequently built source commit `22cae852bbbe433c1cdf65ab4daaef7bfeaf650d`,
-  but there is still no GPU runtime result for that refactor or the merged main commit. PR #25/#26 add trace
-  instrumentation; PR #26 now has the separate short serial smoke described above. Its copied build source had
-  no Git metadata, so the smoke does not prove an exact post-merge whole-tree build identity. No GPU smoke has
-  a proven exact post-merge whole-tree source identity, and there is no current-main AB/CD or parity validation.
+  but there is still no GPU runtime result for that refactor or for the current fork main
+  `f54111839951c0d7f64630064f840b359507fd01`. PR #25/#26 add trace instrumentation; PR #26 now has the separate
+  short serial smoke described above. Its copied build source had no Git metadata, so the smoke does not prove an
+  exact post-merge whole-tree build identity. No public GPU receipt identifies the exact whole-tree source for
+  current fork main `f54111839951c0d7f64630064f840b359507fd01`, and no current-main AB/CD or parity validation is
+  recorded.
   The current-main tree is not validated by archived binary results.
   [Draft PR #4](https://github.com/cassettesgoboom/strata-gfx906/pull/4) preserves a privacy-adapted historical
   AB/CD source candidate against v0.1.41 for review only. PR #17 supplies a CPU transaction-trace comparison
