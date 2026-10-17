@@ -68,7 +68,9 @@ parity result, and it must not be pooled with the archived throughput evidence. 
 private, so this sanitized receipt is not independently reproducible. The copied build source had no Git metadata:
 the tested binary is identified by its PR #26 source association and hash, but the exact post-merge whole-tree
 build identity is unproven. No GPU smoke has a proven exact post-merge whole-tree source identity, and no
-current-main AB/CD or parity validation is established.
+current-main AB/CD or parity validation is established. The receipt lists SHA-256 values for four repo-relative
+mounted/source files that match the public source; this establishes key-file equivalence only, not whole-tree
+identity.
 
 ## PR #29 synthetic state-checkpoint validator
 
