@@ -1,6 +1,6 @@
 # gfx906 upstream delta
 
-This note maps gfx906-relevant features to public upstream commits observed on 2026-10-16. It describes source history only; it does not identify the source commit used to build the archived container.
+This note maps gfx906-relevant features to public upstream commits observed on 2026-10-16 and 2026-10-17. It describes source history only; it does not identify the source commit used to build the archived container.
 
 ## Public fork updates
 
@@ -36,6 +36,32 @@ after a post-launch failure or abort, but it does not implement these actions or
 single next source gate is to integrate this lifecycle and recovery behavior in the current-main verifier/scheduler,
 then use a pinned current-main build for isolated serial-versus-AB/CD GPU checks of ordered native token IDs and window-end state
 hashes. Keep AB/CD opt-in until those runtime checks pass.
+
+## PR #4 current-source comparison (2026-10-17)
+
+Public [PR #4](https://github.com/cassettesgoboom/strata-gfx906/pull/4) remains a draft with head `0fffc4412ebd1ba5e5f880fdabaeb840a1164adc`, based on archived `v0.1.41` commit `fb58e0dbc8399662c0e47c76578c6e878b14f6cf`. It changes 15 files (+1,781/−134) and reports no gfx906 build or exact native-token and persistent-state parity. The reviewed fork main is `f54111839951c0d7f64630064f840b359507fd01`; after `ef91497b71a9ec25a4a30b22695c7d23ffddc89e`, PR #35 changed only the README tag link. Upstream `v0.1.45` and `main` resolve to `477ac13cbe8e582c20484871ce459d20d82df09d`.
+
+The complete PR #4 patch does not apply to either current tree. `git apply --check` fails on `CMakeLists.txt`, `serve/server.py`, `src/core/verify.cpp`, and `src/program/generate.cpp` against upstream v0.1.45; it also fails on `include/strata/core/verify.hpp` against fork main. The verifier and generator APIs have moved since the v0.1.41 base, so this is not a clean cherry-pick or a small context refresh.
+
+| PR #4 path | Disposition against current sources |
+| --- | --- |
+| `CMakeLists.txt` | **Incompatible:** old test-registration context does not apply; the vision and MRoPE test intent needs current build integration. |
+| `docs/gfx906/EXPERIMENTAL-SOURCE.md` | **Obsolete:** records the historical v0.1.41 candidate and its open parity gates; it is not current-main guidance. |
+| `include/strata/core/mtp.hpp` | **Still needed only as a separate fix:** moving `idle()` out of line permits device selection, but synchronizing the drafter stream alone does not provide bounded teardown. |
+| `include/strata/core/session.hpp` | **Still needed as a capability:** per-slot MRoPE positions need session ownership; current v0.1.45 has no session MRoPE pointer. |
+| `include/strata/core/verify.hpp` | **Mixed:** serial `commit_slot_prefixes(const int*, ...)` already exists; the historical `BatchTransaction` and per-slice verifier methods are incompatible with current APIs. |
+| `include/strata/kernels/mrope.hpp` | **Still needed as a capability:** current code exposes a per-device global MRoPE table; the draft scope needs a current ownership and concurrency design. |
+| `include/strata/platform/hip_compat/strata_hip.h` | **Obsolete:** current stream-priority paths use explicit HIP/CUDA APIs; these historical aliases are not needed by current call sites. |
+| `include/strata/program/vision_records.hpp` | **Still needed only if retained:** this parser's record format has no current consumer. |
+| `serve/server.py` | **Obsolete:** the audit-ID header and `RAW_DONE` logging are measurement instrumentation, not scheduler or commit logic. |
+| `src/core/mtp.cpp` | **Mixed:** per-slot MRoPE selection and shared `dvocab_host_` mapping are separate capabilities/fixes. The `OnDevice` teardown hunk still synchronizes only one stream without a deadline. |
+| `src/core/verify.cpp` | **Incompatible:** the old scratch-row and transaction scheduler targets a verifier implementation that has since changed. The existing serial accepted-prefix helper does not provide the missing AB/CD lifetime owner. |
+| `src/program/generate.cpp` | **Incompatible:** the opt-in `STRATA_BATCH_ABCD=1` flow is wired to those old verifier APIs and cannot be copied onto current generation paths. |
+| `tests/core/vision_records_test.cpp` | **Still needed only if retained:** it covers the historical parser, not scheduler correctness. |
+| `tests/cuda/mrope_slot_graph_test.cpp` | **Still needed after redesign:** it checks captured per-slot MRoPE pointers, an API current sources do not expose. |
+| `tools/batch_mtp_split_test.py` | **Obsolete:** it exercises serial split batch-MTP; current fork main has newer interleave and split-parity tooling, and this test does not validate AB/CD. |
+
+Upstream v0.1.45 exposes `batch_launch`/`batch_poll`, `commit_slot_prefixes(const int*, ...)`, and `pl_launch`/`pl_commit_async`; it has no PR #4 per-slice transaction API ([verifier header](https://github.com/Niko1221/Strata/blob/v0.1.45/include/strata/core/verify.hpp)). Fork main has a separate CPU `BatchTransactionRegistry` with accepted-prefix intent and explicit completion, drain, and recovery acknowledgements ([PR #19](https://github.com/cassettesgoboom/strata-gfx906/pull/19)); upstream v0.1.45 does not have this fork-only registry. Its contract trusts a runtime owner to observe GPU completion and draining; it does not own verifier/session allocations, streams, graphs, events, or callbacks. [Issue #24](https://github.com/cassettesgoboom/strata-gfx906/issues/24) remains the gate: verifier release registration covers only selected streams, while graph work can still reference session-owned recurrence state and verifier destruction can block without a deadline. No scheduler subset from PR #4 is safe to port until that owner is implemented and connected; keep serial defaults and backends unchanged. Then port the opt-in accepted-prefix path against current APIs and prove exact token and recurrent-state parity before promotion.
 
 ## Feature-to-commit map
 
