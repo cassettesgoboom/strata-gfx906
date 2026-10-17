@@ -380,9 +380,18 @@ class ReplicaEngine:
                     self.healing[k] = False
             threading.Thread(target=run, daemon=True).start()
 
-    def generate(self, ids, max_new, sampling, cancel, embeddings=None):
+    def generate(self, ids, max_new, sampling, cancel, embeddings=None, request_id=None):
         # imported here: serve.server imports this module
         from serve.server import EngineDied, EngineNonFinite
+        from serve import native_trace
+        trace_arg = {"request_id": request_id} if native_trace.enabled() else {}
+        if native_trace.enabled():
+            native_trace.field(request_id)
+            unsupported = [i for i, engine in enumerate(self.engines)
+                           if not native_trace.accepts_request_id(getattr(engine, "generate", None))]
+            if unsupported:
+                raise RuntimeError("STRATA_CORRECTNESS_TRACE requires request_id support on every replica; "
+                                   f"unsupported replicas: {unsupported}")
         k = self.route(ids)
         if k < 0:
             raise EngineDied("no replica is running; this request was not sent")
@@ -400,9 +409,9 @@ class ReplicaEngine:
                         return
                 held = True
             if embeddings is not None:
-                gen = e.generate(ids, max_new, sampling, cancel, embeddings=embeddings)
+                gen = e.generate(ids, max_new, sampling, cancel, embeddings=embeddings, **trace_arg)
             else:
-                gen = e.generate(ids, max_new, sampling, cancel)
+                gen = e.generate(ids, max_new, sampling, cancel, **trace_arg)
             for t in gen:
                 if t is not None:
                     produced.append(t)
