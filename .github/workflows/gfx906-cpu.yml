@@ -8,6 +8,11 @@ on:
       - 'tests/gfx906/**'
       - 'tests/core/batch_transaction_test.cpp'
       - 'include/strata/core/batch_transaction.hpp'
+      - 'tests/core/on_device_scope_test.cpp'
+      - 'tests/fake_cuda/include/cuda_runtime.h'
+      - 'include/strata/core/on_device.hpp'
+      - 'include/strata/core/mtp.hpp'
+      - 'src/core/mtp.cpp'
       - 'tests/core/verify_release_control_test.cpp'
       - 'include/strata/core/verify_release.hpp'
       - 'include/strata/core/verify.hpp'
@@ -33,6 +38,11 @@ on:
       - 'tests/gfx906/**'
       - 'tests/core/batch_transaction_test.cpp'
       - 'include/strata/core/batch_transaction.hpp'
+      - 'tests/core/on_device_scope_test.cpp'
+      - 'tests/fake_cuda/include/cuda_runtime.h'
+      - 'include/strata/core/on_device.hpp'
+      - 'include/strata/core/mtp.hpp'
+      - 'src/core/mtp.cpp'
       - 'tests/core/verify_release_control_test.cpp'
       - 'include/strata/core/verify_release.hpp'
       - 'include/strata/core/verify.hpp'
@@ -86,6 +96,10 @@ jobs:
         run: |
           c++ -std=c++20 -Wall -Wextra -Werror -Iinclude tests/core/batch_transaction_test.cpp -o "$RUNNER_TEMP/batch_transaction_test"
           "$RUNNER_TEMP/batch_transaction_test"
+      - name: Device selection scope contract
+        run: |
+          c++ -std=c++20 -Wall -Wextra -Werror -Itests/fake_cuda/include -Iinclude tests/core/on_device_scope_test.cpp -o "$RUNNER_TEMP/on_device_scope_test"
+          "$RUNNER_TEMP/on_device_scope_test"
       - name: Verifier release-control lifecycle contract
         run: |
           c++ -std=c++20 -DNDEBUG -Wall -Wextra -Werror -pthread -Iinclude tests/core/verify_release_control_test.cpp -o "$RUNNER_TEMP/verify_release_control_test"

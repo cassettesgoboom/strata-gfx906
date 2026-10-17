@@ -1162,6 +1162,13 @@ endif()
 add_library(strata_spec STATIC src/spec/suffix_drafter.cpp src/spec/controller.cpp src/spec/draft_policy.cpp
             src/spec/draft_source.cpp)
 target_include_directories(strata_spec PUBLIC include)
+if(STRATA_BUILD_TESTS AND NOT STRATA_ENABLE_CUDA AND NOT STRATA_ENABLE_HIP)
+  # Device selection/restoration is exercised with a CPU-only mock runtime.
+  add_executable(on_device_scope_test tests/core/on_device_scope_test.cpp)
+  target_include_directories(on_device_scope_test BEFORE PRIVATE tests/fake_cuda/include include)
+  add_test(NAME on_device_scope_test COMMAND on_device_scope_test)
+endif()
+
 if(STRATA_BUILD_TESTS)
   add_executable(arch_defaults_test src/core/arch_defaults_test.cpp src/core/arch_defaults.cpp)
   target_include_directories(arch_defaults_test PRIVATE include)
