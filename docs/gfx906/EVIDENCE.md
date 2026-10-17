@@ -50,8 +50,28 @@ an AB/CD port, a new image, or a current-main GPU smoke.
 `STRATA_CORRECTNESS_WINDOW_TRACE=1` serial-window trace mode; the base request-ID trace continues to support
 batch requests. The isolated gfx906 HIP compile produced native binary SHA-256
 `68b582aeee55707082b0db49c3cdc7ae3e464c515a651e3ed758cfb628c92594`. Both hosted CPU checks passed. This
-does not establish model-backed capture, GPU runtime behavior, token parity, recurrent-state hash parity, or
-publication of a new image.
+does not by itself establish model-backed capture, GPU runtime behavior, token parity, recurrent-state hash parity,
+or publication of a new image. A later short serial GPU smoke of this binary is summarized below.
+
+## PR #26 serial-window GPU smoke
+
+The [sanitized receipt](../../benchmarks/gfx906/receipts/2026-10-17-pr26-serial-smoke.json) records a short
+serial smoke on two gfx906 MI50 cards at 4096 context. It exercised the PR #26 native binary
+`68b582aeee55707082b0db49c3cdc7ae3e464c515a651e3ed758cfb628c92594` over the archived OCI runtime base with
+the newer binary overmounted. No new image was built or published. The repeated warm request recorded 75 prompt,
+146 output, and 70 reused prompt tokens; the actual-assistant continuation recorded 173 prompt, 130 output, and
+70 reused tokens. The contiguous native windows contained 51 and 57 records. Native token-ID counts matched the
+146 and 130 client/native completion counts. MTP accepted/offered counts were 96/118 and 76/88. An initial
+native-log collection attempt was corrected by repeating the short requests inside the same candidate; only the
+corrected trace accounting is summarized here. This is not a throughput benchmark, AB/CD comparison, or state
+parity result, and it must not be pooled with the archived throughput evidence.
+
+## PR #29 synthetic state-checkpoint validator
+
+[PR #29](https://github.com/cassettesgoboom/strata-gfx906/pull/29) merged at `a9e6712c`. The 60-test CPU suite
+passes. The synthetic validator compares `diagnostic_records_equal` only and keeps
+`runtime_parity_claim=false`. It validates comparator behavior on supplied diagnostic records; it does not
+authenticate runtime capture or establish token or persistent-state parity.
 
 ## CPU-only AB/CD trace comparator
 
