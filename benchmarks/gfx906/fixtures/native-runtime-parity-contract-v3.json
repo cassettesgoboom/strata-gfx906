@@ -14,7 +14,14 @@
       "source_commit", "binary_sha256", "model_sha256", "tokenizer_sha256",
       "mtp_sha256", "command_sha256", "device_and_runtime", "trace_capture_method"
     ],
-    "command_sha256": "Compute this digest from the normalized effective command identity: retain all request inputs and effective options, removing only the STRATA_BATCH_ABCD OFF/ON setting (serial unset or 0; candidate 1). The trace producer performs this normalization; the comparator validates SHA-256 syntax and exact equality but cannot establish how the digest was computed.",
+    "command_sha256": {
+      "identity_object_version": "strata_effective_command_identity_v1",
+      "identity_object": "A JSON object with exactly four members: identity_version (the version string above), effective_options, request_inputs, and effective_environment. effective_options maps canonical long-option names without the leading -- to resolved JSON values including defaults; aliases use their long-option name, repeated options are arrays in argument order, and artifact-valued options use content SHA-256 identities rather than local paths. request_inputs is an array in trace request order, with each request's request_id, cache_key_sha256, cache_reused_tokens, cache_fresh_tokens, input_token_count, input_token_tail_ids, input_token_ids_sha256, and sampler_state_sha256. effective_environment maps exact variable names to all non-secret behavior-affecting effective string values.",
+      "mode_toggle_normalization": "Omit only effective_environment.STRATA_BATCH_ABCD, and do not encode it in another member. The serial value must be unset or string 0; the candidate value must be string 1. Retain every other option, request input identity, and effective environment value unchanged.",
+      "canonical_serialization": "Serialize the identity object using RFC 8785 JSON Canonicalization Scheme (JCS) to UTF-8 bytes, with no BOM or trailing newline; object-key ordering and JSON string/number escaping follow RFC 8785, and array order is preserved.",
+      "digest": "Compute SHA-256 over those UTF-8 bytes and store lowercase 64-character hexadecimal.",
+      "producer_boundary": "The trace producer builds and normalizes this identity object. The comparator validates digest syntax and exact equality only; it cannot establish the object contents, normalization, or capture authenticity."
+    },
     "matched_request_fields": [
       "request_id", "cache_key_sha256", "cache_reused_tokens", "cache_fresh_tokens",
       "input_token_count", "input_token_tail_ids", "input_token_ids_sha256", "sampler_state_sha256", "initial_checkpoint"
