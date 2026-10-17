@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "native-state-trace-v1.schema.json",
   "title": "gfx906 native recurrent state trace v1",
-  "description": "Diagnostic contract for supplied stage ordered digests. It cannot prove capture authenticity or complete runtime inventory.",
+  "description": "Diagnostic contract for supplied stage ordered digests. Requires exactly one declared layer range for each supported component kind. It cannot prove capture authenticity or complete runtime inventory.",
   "type": "object",
   "required": [
     "trace_format",
@@ -174,7 +174,57 @@
           }
         ]
       },
-      "maxItems": 3
+      "maxItems": 3,
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "component_id"
+            ],
+            "properties": {
+              "component_id": {
+                "const": "gdn_recurrent"
+              }
+            },
+            "additionalProperties": false
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "component_id"
+            ],
+            "properties": {
+              "component_id": {
+                "const": "qsa_indexer_idx_block_pos"
+              }
+            },
+            "additionalProperties": false
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "component_id"
+            ],
+            "properties": {
+              "component_id": {
+                "const": "ple_prev_token"
+              }
+            },
+            "additionalProperties": false
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
     },
     "stage_plan": {
       "type": "array",
@@ -384,5 +434,5 @@
     }
   },
   "additionalProperties": false,
-  "$comment": "Validator limits each input file to 2097152 bytes, stages to 64, committed token IDs to 4096, shape rank to 16, component ordinals and per-stage records to 4096, and total expanded inventory to 4096. The schema cannot express byte size or cross-range sum limits."
+  "$comment": "Validator limits each input file to 2097152 bytes, stages to 64, committed token IDs to 4096, shape rank to 16, component ordinals and per-stage records to 4096, and total expanded inventory to 4096. The schema cannot express byte size or cross-range sum limits. Cross-record joins enforced procedurally by tools/gfx906_state_trace.py: component ranges must have unique kinds and expand to contiguous ordinals; each stage owned_components must exactly match the ordered expanded inventory; checkpoint stage IDs/order and component ordinals/metadata must match the stage plan and inventory; committed_token_count must equal committed_token_ids length; and the two traces must match request/window identity, provenance and plans. JSON Schema checks shape and declared field constraints, not these joins."
 }

@@ -159,6 +159,19 @@ class StateTraceTests(unittest.TestCase):
         self.assertEqual(schema["properties"]["layer_ranges"]["items"]["properties"]["count"]["maximum"], state_trace.MAX_COMPONENTS)
         self.assertIn(str(state_trace.MAX_TRACE_FILE_BYTES), schema["$comment"])
 
+    def test_schema_requires_exactly_one_range_for_each_state_kind(self):
+        schema = json.loads((FIXTURES / "native-state-trace-v1.schema.json").read_text())
+        ranges = schema["properties"]["layer_ranges"]
+        self.assertEqual(ranges["minItems"], 3)
+        self.assertEqual(ranges["maxItems"], 3)
+        self.assertTrue(all(rule["minContains"] == 1 and rule["maxContains"] == 1 for rule in ranges["allOf"]))
+        kinds = [rule["contains"]["properties"]["component_id"]["const"] for rule in ranges["allOf"]]
+        self.assertEqual(set(kinds), state_trace.COMPONENT_KINDS)
+        self.assertIn("Cross-record joins enforced procedurally", schema["$comment"])
+        changed = deepcopy(self.serial)
+        changed["layer_ranges"][2]["component_id"] = "gdn_recurrent"
+        self.assertTrue(any("duplicate layer range" in error for error in state_trace.validate_trace(changed)))
+
     def test_input_and_expansion_limits_fail_before_unbounded_work(self):
         changed = deepcopy(self.serial)
         changed["stage_plan"] = changed["stage_plan"] * (state_trace.MAX_STAGES + 1)
