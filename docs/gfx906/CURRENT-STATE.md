@@ -45,6 +45,12 @@ records; they do not add a native AB/CD runtime port or new GPU/parity evidence.
 [upstream `Niko1221/Strata`](https://github.com/Niko1221/Strata), and the latest upstream release checked here is
 [v0.1.45](https://github.com/Niko1221/Strata/releases/tag/v0.1.45).
 
+**Open source-review candidate (2026-10-18):** draft [PR #41](https://github.com/cassettesgoboom/strata-gfx906/pull/41)
+scopes MTP idle synchronization and resource cleanup to the drafter's captured CUDA/HIP device. Its isolated gfx906
+HIP compile and CPU checks are recorded in
+[`2026-10-17-mtp-device-scope-hip-build.json`](../../benchmarks/gfx906/receipts/2026-10-17-mtp-device-scope-hip-build.json).
+No GPU runtime or inference was tested; this does not port AB/CD or resolve issue #24.
+
 **Reviewed engine-source snapshot (checked 2026-10-17 UTC):** the reviewed fork `main` at that source review was
 [`af45b70bf5cb7e61a0e0825c632397190a97e18b`](https://github.com/cassettesgoboom/strata-gfx906/commit/af45b70bf5cb7e61a0e0825c632397190a97e18b),
 with [PR #36](https://github.com/cassettesgoboom/strata-gfx906/pull/36) just merged. This update changes docs only
