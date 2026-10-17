@@ -9,7 +9,7 @@
 
 ## Dual AMD MI50 (2x32 GB) — measured cached multi-agent inference
 
-Archived measurements from the published [gfx906 Docker image](https://hub.docker.com/r/cassettesgoboom/strata-gfx906),
+Archived measurements from the published [gfx906 Docker image](https://hub.docker.com/r/cassettesgoboom/strata-gfx906/tags?name=0.1.41-winglab-20261015-exp),
 using cached multi-agent histories:
 
 | Mode | Actual context/agent | Strict overlap tok/s | Whole wave tok/s |
