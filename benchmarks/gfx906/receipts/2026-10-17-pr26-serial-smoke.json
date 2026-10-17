@@ -1,0 +1,82 @@
+{
+  "schema": "gfx906-serial-window-smoke-v1",
+  "date_utc": "2026-10-17",
+  "classification": "short serial GPU smoke; trace accounting only, not a benchmark or parity test",
+  "source": {
+    "pr": 26,
+    "native_sha256": "68b582aeee55707082b0db49c3cdc7ae3e464c515a651e3ed758cfb628c92594",
+    "copied_build_source_had_git_metadata": false,
+    "exact_post_merge_whole_tree_identity_proven": false,
+    "scope_note": "Binary is associated with PR 26 by source association and hash; no exact post-merge whole-tree build identity is proven.",
+    "verified_mounted_source_files": [
+      {
+        "path": "src/program/generate.cpp",
+        "sha256": "1ea342e8c37b45bd1323c0767696382bc7d087885634e43371f9004fb26c5031"
+      },
+      {
+        "path": "src/core/verify.cpp",
+        "sha256": "28a391ffd8ec2af4234302762abb243d606e4eb36159e3339b8f2b2ad581bcc3"
+      },
+      {
+        "path": "serve/native_trace.py",
+        "sha256": "55d3c2f7634f63f4e235ce1c8627aee43e3353170e351aae6cd5e101b49369b8"
+      },
+      {
+        "path": "serve/server.py",
+        "sha256": "7af791e669f416a023b62ab4488d23e7693bd420acb7f12d90d792cbdcc4f407"
+      }
+    ],
+    "key_file_equivalence_scope": "The listed mounted/source files match these repo-relative public-source hashes. This is key-file equivalence only and does not prove whole-tree source identity."
+  },
+  "distribution": {
+    "base_runtime_index_digest": "sha256:a7527bd8efe2dcdb0a0a7fd6b96761507ce79f9d585ce1649ce5b91158258a29",
+    "new_binary_overmounted": true,
+    "new_image_built_or_published": false
+  },
+  "environment": {
+    "hardware_class": "two AMD Instinct MI50 cards, gfx906",
+    "mode": "serial",
+    "context_tokens": 4096,
+    "model_backed": true,
+    "model_identity_recorded": false
+  },
+  "requests": [
+    {
+      "kind": "repeated_warm_request",
+      "prompt_tokens": 75,
+      "output_tokens": 146,
+      "reused_prompt_tokens": 70,
+      "contiguous_native_window_records": 51,
+      "native_token_id_count": 146,
+      "mtp_accepted": 96,
+      "mtp_offered": 118
+    },
+    {
+      "kind": "actual_assistant_continuation",
+      "prompt_tokens": 173,
+      "output_tokens": 130,
+      "reused_prompt_tokens": 70,
+      "contiguous_native_window_records": 57,
+      "native_token_id_count": 130,
+      "mtp_accepted": 76,
+      "mtp_offered": 88
+    }
+  ],
+  "accounting": {
+    "client_output_token_counts_match_native_token_id_counts": true,
+    "ab_cd_comparison": false,
+    "runtime_parity_claim": false
+  },
+  "capture_note": "An initial native-log collection attempt was corrected by repeating the short requests inside the same candidate; this receipt summarizes the corrected trace accounting only.",
+  "raw_trace": {
+    "model_backed_trace_private": true,
+    "independently_reproducible_from_sanitized_receipt": false
+  },
+  "limitations": [
+    "This is a short serial smoke, not a throughput benchmark.",
+    "The run does not compare AB/CD execution or establish token or recurrent-state parity.",
+    "The raw model-backed trace remains private, and the sanitized receipt does not permit independent reproduction.",
+    "The copied build source had no Git metadata, so exact post-merge whole-tree source identity is unproven.",
+    "The newer native binary was overmounted on the archived runtime base; the archived image contents were not replaced."
+  ]
+}
