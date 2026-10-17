@@ -12,7 +12,9 @@ on:
       - 'src/core/verify.cpp'
       - 'src/program/generate.cpp'
       - 'include/strata/program/native_trace_id.hpp'
+      - 'include/strata/program/native_window_trace.hpp'
       - 'tests/program/native_trace_id_test.cpp'
+      - 'tests/program/native_window_trace_test.cpp'
       - 'serve/server.py'
       - 'serve/replicas.py'
       - 'serve/native_trace.py'
@@ -33,7 +35,9 @@ on:
       - 'src/core/verify.cpp'
       - 'src/program/generate.cpp'
       - 'include/strata/program/native_trace_id.hpp'
+      - 'include/strata/program/native_window_trace.hpp'
       - 'tests/program/native_trace_id_test.cpp'
+      - 'tests/program/native_window_trace_test.cpp'
       - 'serve/server.py'
       - 'serve/replicas.py'
       - 'serve/native_trace.py'
@@ -68,6 +72,10 @@ jobs:
         run: |
           c++ -std=c++20 -Wall -Wextra -Werror -Iinclude tests/program/native_trace_id_test.cpp -o "$RUNNER_TEMP/native_trace_id_test"
           "$RUNNER_TEMP/native_trace_id_test"
+      - name: Native serial window trace contract
+        run: |
+          c++ -std=c++20 -Wall -Wextra -Werror -Iinclude tests/program/native_window_trace_test.cpp -o "$RUNNER_TEMP/native_window_trace_test"
+          "$RUNNER_TEMP/native_window_trace_test"
       - name: Batch transaction lifecycle contract
         run: |
           c++ -std=c++20 -Wall -Wextra -Werror -Iinclude tests/core/batch_transaction_test.cpp -o "$RUNNER_TEMP/batch_transaction_test"
