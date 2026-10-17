@@ -1,0 +1,1386 @@
+{
+  "architecture": {
+    "gdn_geometry": {
+      "conv_channels": 3,
+      "conv_kernel": 3,
+      "state_size": 2,
+      "value_heads": 2
+    },
+    "gdn_layers": [
+      0,
+      2
+    ],
+    "layer_count": 3,
+    "model_family": "synthetic-three-layer-contract-model",
+    "mtp_geometry": {
+      "head_dim": 4,
+      "kv_heads": 1,
+      "page_size_cells": 2,
+      "ring_capacity_cells": 2
+    },
+    "ple_geometry": {
+      "history_channels": 3,
+      "history_rows": 2,
+      "previous_token_count": 2
+    },
+    "qsa_geometry": {
+      "head_dim": 4,
+      "idx_block": 2,
+      "idx_dim": 4,
+      "kv_heads": 1,
+      "page_size_cells": 2
+    },
+    "qsa_layers": [
+      1
+    ]
+  },
+  "contract_version": 3,
+  "evidence_class": "synthetic_contract_only",
+  "mode": "abcd_on",
+  "provenance": {
+    "binary_sha256": "3c59e26726a9083db93c94324ef22d5ed9e70dfaf04de3c7494bd68673a81b48",
+    "command_sha256": "3c59e26726a9083db93c94324ef22d5ed9e70dfaf04de3c7494bd68673a81b48",
+    "device_and_runtime": "synthetic fixture; no device accessed",
+    "model_sha256": "3c59e26726a9083db93c94324ef22d5ed9e70dfaf04de3c7494bd68673a81b48",
+    "mtp_sha256": "3c59e26726a9083db93c94324ef22d5ed9e70dfaf04de3c7494bd68673a81b48",
+    "source_commit": "synthetic-fixture-only",
+    "synthetic": true,
+    "tokenizer_sha256": "3c59e26726a9083db93c94324ef22d5ed9e70dfaf04de3c7494bd68673a81b48",
+    "trace_capture_method": "synthetic labels; no runtime capture"
+  },
+  "requests": [
+    {
+      "cache_fresh_tokens": 2,
+      "cache_key_sha256": "3c59e26726a9083db93c94324ef22d5ed9e70dfaf04de3c7494bd68673a81b48",
+      "cache_reused_tokens": 2,
+      "commits": [
+        {
+          "capture_point": {
+            "after_verifier_commit": true,
+            "copy_completion_synchronized": true,
+            "mtp_draft_stream_synchronized": true,
+            "mutating_streams_synchronized": true
+          },
+          "commit_index": 0,
+          "committed_tokens": [
+            {
+              "position": 4,
+              "token_id": 201
+            },
+            {
+              "position": 5,
+              "token_id": 202
+            }
+          ],
+          "components": [
+            {
+              "byte_length": 32,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "gdn_recurrence@0",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 6
+              },
+              "kind": "gdn_recurrence",
+              "layer_index": 0,
+              "layout": "key_width,value_head,key_width",
+              "sha256": "2f941966ea16deb3421856383cca1a5ca96dca57f72281fc94e3fadc030c9689",
+              "shape": [
+                2,
+                2,
+                2
+              ]
+            },
+            {
+              "byte_length": 24,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "gdn_conv_history@0",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 6
+              },
+              "kind": "gdn_conv_history",
+              "layer_index": 0,
+              "layout": "channel,history_oldest_first",
+              "sha256": "824221ec921b60237e4f91606fd00571869e4d991f64b14da26cd3eddc84a818",
+              "shape": [
+                3,
+                2
+              ]
+            },
+            {
+              "byte_length": 48,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_kv_key@1",
+              "dtype": "fp16",
+              "format_metadata": {
+                "key_rotation": "none",
+                "kv_format": "fp16",
+                "kv_mode": "resident",
+                "kv_role": "key",
+                "logical_live_position_end_exclusive": 6,
+                "logical_live_position_start": 0,
+                "page_size_cells": 2,
+                "payload_segments": [
+                  {
+                    "byte_length": 48,
+                    "logical_order": "logical_position,kv_head,head_dim",
+                    "name": "values_fp16_le",
+                    "offset_bytes": 0
+                  }
+                ],
+                "value_rotation": "none"
+              },
+              "kind": "qsa_kv_key",
+              "layer_index": 1,
+              "layout": "logical_position,kv_head,head_dim",
+              "sha256": "1ff82004e0f1c30d6af40b41d23e4fb30410384c7f12495b20c02b1cb56ae71a",
+              "shape": [
+                6,
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 48,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_kv_value@1",
+              "dtype": "fp16",
+              "format_metadata": {
+                "key_rotation": "none",
+                "kv_format": "fp16",
+                "kv_mode": "resident",
+                "kv_role": "value",
+                "logical_live_position_end_exclusive": 6,
+                "logical_live_position_start": 0,
+                "page_size_cells": 2,
+                "payload_segments": [
+                  {
+                    "byte_length": 48,
+                    "logical_order": "logical_position,kv_head,head_dim",
+                    "name": "values_fp16_le",
+                    "offset_bytes": 0
+                  }
+                ],
+                "value_rotation": "none"
+              },
+              "kind": "qsa_kv_value",
+              "layer_index": 1,
+              "layout": "logical_position,kv_head,head_dim",
+              "sha256": "a46f60c409bfb299e3c725e37476663d9b4594dd6af1a846398d227efdf53ed1",
+              "shape": [
+                6,
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 16,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_idx_tail@1",
+              "dtype": "fp32",
+              "format_metadata": {
+                "idx_block": 2,
+                "idx_dim": 4,
+                "idx_pooled_rows": 4,
+                "position_end_exclusive": 6
+              },
+              "kind": "qsa_idx_tail",
+              "layer_index": 1,
+              "layout": "tail_position,idx_dimension",
+              "sha256": "4e8b39bfaad98293f28cedab5605a6eb24b5dba79043a016626d1b0a7cf81124",
+              "shape": [
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 16,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_idx_dead@1",
+              "dtype": "fp32",
+              "format_metadata": {
+                "idx_block": 2,
+                "idx_dim": 4,
+                "idx_pooled_rows": 4,
+                "position_end_exclusive": 6
+              },
+              "kind": "qsa_idx_dead",
+              "layer_index": 1,
+              "layout": "dead_key_dimension",
+              "sha256": "1e975cedc344a6bb27b06c895b914e7545f924d198e909bbf7385c7f8701770c",
+              "shape": [
+                4
+              ]
+            },
+            {
+              "byte_length": 64,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_idx_pooled@1",
+              "dtype": "fp32",
+              "format_metadata": {
+                "idx_block": 2,
+                "idx_dim": 4,
+                "idx_pooled_rows": 4,
+                "position_end_exclusive": 6
+              },
+              "kind": "qsa_idx_pooled",
+              "layer_index": 1,
+              "layout": "logical_pooled_row,idx_dimension",
+              "sha256": "d60083f721175cf6dd5e723137f1b9c6cc4701f1902140a1d9216bfc1f394ebd",
+              "shape": [
+                4,
+                4
+              ]
+            },
+            {
+              "byte_length": 4,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_idx_block_pos@1",
+              "dtype": "int32",
+              "format_metadata": {
+                "idx_block": 2,
+                "idx_block_pos_value": 5,
+                "idx_dim": 4,
+                "idx_pooled_rows": 4,
+                "position_end_exclusive": 6
+              },
+              "kind": "qsa_idx_block_pos",
+              "layer_index": 1,
+              "layout": "scalar",
+              "sha256": "de1055a0b48b92d8c689e009103d5ef201e954899107813cef51ae5baa230532",
+              "shape": [
+                1
+              ]
+            },
+            {
+              "byte_length": 32,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "gdn_recurrence@2",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 6
+              },
+              "kind": "gdn_recurrence",
+              "layer_index": 2,
+              "layout": "key_width,value_head,key_width",
+              "sha256": "21efa35161b59e859bb93ef1d8dbd372ea3c802d753b3ea5608ecf3031fb5ce5",
+              "shape": [
+                2,
+                2,
+                2
+              ]
+            },
+            {
+              "byte_length": 24,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "gdn_conv_history@2",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 6
+              },
+              "kind": "gdn_conv_history",
+              "layer_index": 2,
+              "layout": "channel,history_oldest_first",
+              "sha256": "24174e1954c89e639d7ec1769c28993d8c26e0be1304d7d9cb6f3a338eac866d",
+              "shape": [
+                3,
+                2
+              ]
+            },
+            {
+              "byte_length": 24,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "ple_history",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 6
+              },
+              "kind": "ple_history",
+              "layer_index": null,
+              "layout": "channel,history_oldest_first",
+              "sha256": "9f9bee11e7e2d3bfe7a130f95c722567042ae786737a7d1cbb8e911d54634ffa",
+              "shape": [
+                3,
+                2
+              ]
+            },
+            {
+              "byte_length": 8,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "ple_previous_token_ids",
+              "dtype": "int32",
+              "format_metadata": {
+                "position_end_exclusive": 6,
+                "token_ids": [
+                  201,
+                  202
+                ]
+              },
+              "kind": "ple_previous_token_ids",
+              "layer_index": null,
+              "layout": "oldest_to_newest",
+              "sha256": "68060122f1d5b57164d3d9c091e3a664259bda9ddcf26f72090da15049e50317",
+              "shape": [
+                2
+              ]
+            },
+            {
+              "byte_length": 16,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "mtp_kv_key",
+              "dtype": "fp16",
+              "format_metadata": {
+                "key_rotation": "none",
+                "kv_format": "fp16",
+                "kv_mode": "ring",
+                "kv_role": "key",
+                "logical_live_position_end_exclusive": 6,
+                "logical_live_position_start": 4,
+                "page_size_cells": 2,
+                "payload_segments": [
+                  {
+                    "byte_length": 16,
+                    "logical_order": "logical_position,kv_head,head_dim",
+                    "name": "values_fp16_le",
+                    "offset_bytes": 0
+                  }
+                ],
+                "value_rotation": "none"
+              },
+              "kind": "mtp_kv_key",
+              "layer_index": null,
+              "layout": "logical_position,kv_head,head_dim",
+              "sha256": "a87ca989d9a4bafb53e0700fca726271f5f03aff8fb5543d39ba25e304f3bf1a",
+              "shape": [
+                2,
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 16,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "mtp_kv_value",
+              "dtype": "fp16",
+              "format_metadata": {
+                "key_rotation": "none",
+                "kv_format": "fp16",
+                "kv_mode": "ring",
+                "kv_role": "value",
+                "logical_live_position_end_exclusive": 6,
+                "logical_live_position_start": 4,
+                "page_size_cells": 2,
+                "payload_segments": [
+                  {
+                    "byte_length": 16,
+                    "logical_order": "logical_position,kv_head,head_dim",
+                    "name": "values_fp16_le",
+                    "offset_bytes": 0
+                  }
+                ],
+                "value_rotation": "none"
+              },
+              "kind": "mtp_kv_value",
+              "layer_index": null,
+              "layout": "logical_position,kv_head,head_dim",
+              "sha256": "2cb4ef29b94e7c76735ff1393d779d4ca875dff3445ef4f81525be217b4e8aff",
+              "shape": [
+                2,
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 8,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "mtp_ring_mapping",
+              "dtype": "int32",
+              "format_metadata": {
+                "logical_live_position_end_exclusive": 6,
+                "logical_live_position_start": 4,
+                "page_size_cells": 2,
+                "ring_capacity_cells": 2,
+                "ring_slots_by_logical_position": [
+                  0,
+                  1
+                ]
+              },
+              "kind": "mtp_ring_mapping",
+              "layer_index": null,
+              "layout": "logical_position_to_physical_cell_slot",
+              "sha256": "514ea6ea5ee3236c126a61a5e833bb582b22a9a5f771eeeb586350fd83e5ffb8",
+              "shape": [
+                2
+              ]
+            }
+          ],
+          "expected_component_counts": {
+            "gdn_conv_history": 2,
+            "gdn_recurrence": 2,
+            "mtp_kv_key": 1,
+            "mtp_kv_value": 1,
+            "mtp_ring_mapping": 1,
+            "ple_history": 1,
+            "ple_previous_token_ids": 1,
+            "qsa_idx_block_pos": 1,
+            "qsa_idx_dead": 1,
+            "qsa_idx_pooled": 1,
+            "qsa_idx_tail": 1,
+            "qsa_kv_key": 1,
+            "qsa_kv_value": 1
+          },
+          "expected_component_inventory": [
+            "gdn_recurrence@0",
+            "gdn_conv_history@0",
+            "qsa_kv_key@1",
+            "qsa_kv_value@1",
+            "qsa_idx_tail@1",
+            "qsa_idx_dead@1",
+            "qsa_idx_pooled@1",
+            "qsa_idx_block_pos@1",
+            "gdn_recurrence@2",
+            "gdn_conv_history@2",
+            "ple_history",
+            "ple_previous_token_ids",
+            "mtp_kv_key",
+            "mtp_kv_value",
+            "mtp_ring_mapping"
+          ],
+          "mtp_accepted_token_ids": [
+            800
+          ],
+          "mtp_offered_token_ids": [
+            800
+          ],
+          "native_token_ids": [
+            700,
+            710
+          ],
+          "ple_previous_token_ids": [
+            201,
+            202
+          ],
+          "position_end_exclusive": 6,
+          "position_start": 4,
+          "state_formats": {
+            "mtp": {
+              "key_rotation": "none",
+              "kv_format": "fp16",
+              "kv_mode": "ring",
+              "page_size_cells": 2,
+              "ring_slots_by_logical_position": [
+                0,
+                1
+              ],
+              "value_rotation": "none"
+            },
+            "qsa_layer_1": {
+              "idx_block_pos_value": 5,
+              "key_rotation": "none",
+              "kv_format": "fp16",
+              "kv_mode": "resident",
+              "page_size_cells": 2,
+              "value_rotation": "none"
+            }
+          }
+        },
+        {
+          "capture_point": {
+            "after_verifier_commit": true,
+            "copy_completion_synchronized": true,
+            "mtp_draft_stream_synchronized": true,
+            "mutating_streams_synchronized": true
+          },
+          "commit_index": 1,
+          "committed_tokens": [
+            {
+              "position": 6,
+              "token_id": 203
+            },
+            {
+              "position": 7,
+              "token_id": 204
+            }
+          ],
+          "components": [
+            {
+              "byte_length": 32,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "gdn_recurrence@0",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 8
+              },
+              "kind": "gdn_recurrence",
+              "layer_index": 0,
+              "layout": "key_width,value_head,key_width",
+              "sha256": "733464ebebe5997ab31125379b5127504d5632537e077c3bba889a1db3c582a6",
+              "shape": [
+                2,
+                2,
+                2
+              ]
+            },
+            {
+              "byte_length": 24,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "gdn_conv_history@0",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 8
+              },
+              "kind": "gdn_conv_history",
+              "layer_index": 0,
+              "layout": "channel,history_oldest_first",
+              "sha256": "0c7f206ed35b5dab7190a0b7d42e5b7d3c5776d2e2ec83f6f4f91c47778b7b4b",
+              "shape": [
+                3,
+                2
+              ]
+            },
+            {
+              "byte_length": 64,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_kv_key@1",
+              "dtype": "fp16",
+              "format_metadata": {
+                "key_rotation": "none",
+                "kv_format": "fp16",
+                "kv_mode": "resident",
+                "kv_role": "key",
+                "logical_live_position_end_exclusive": 8,
+                "logical_live_position_start": 0,
+                "page_size_cells": 2,
+                "payload_segments": [
+                  {
+                    "byte_length": 64,
+                    "logical_order": "logical_position,kv_head,head_dim",
+                    "name": "values_fp16_le",
+                    "offset_bytes": 0
+                  }
+                ],
+                "value_rotation": "none"
+              },
+              "kind": "qsa_kv_key",
+              "layer_index": 1,
+              "layout": "logical_position,kv_head,head_dim",
+              "sha256": "caac280b82b80588f8b197ea66c053a6c87b4dae74bd1a710065134183c0ac60",
+              "shape": [
+                8,
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 64,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_kv_value@1",
+              "dtype": "fp16",
+              "format_metadata": {
+                "key_rotation": "none",
+                "kv_format": "fp16",
+                "kv_mode": "resident",
+                "kv_role": "value",
+                "logical_live_position_end_exclusive": 8,
+                "logical_live_position_start": 0,
+                "page_size_cells": 2,
+                "payload_segments": [
+                  {
+                    "byte_length": 64,
+                    "logical_order": "logical_position,kv_head,head_dim",
+                    "name": "values_fp16_le",
+                    "offset_bytes": 0
+                  }
+                ],
+                "value_rotation": "none"
+              },
+              "kind": "qsa_kv_value",
+              "layer_index": 1,
+              "layout": "logical_position,kv_head,head_dim",
+              "sha256": "de770b63d5a30618a19784f79a7206edf858696e00ae14c72991601d2d1bba7c",
+              "shape": [
+                8,
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 16,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_idx_tail@1",
+              "dtype": "fp32",
+              "format_metadata": {
+                "idx_block": 2,
+                "idx_dim": 4,
+                "idx_pooled_rows": 5,
+                "position_end_exclusive": 8
+              },
+              "kind": "qsa_idx_tail",
+              "layer_index": 1,
+              "layout": "tail_position,idx_dimension",
+              "sha256": "093c5aa740a290a518a8b89e510445e50a037f4db1245faf575564fbfbc900d9",
+              "shape": [
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 16,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_idx_dead@1",
+              "dtype": "fp32",
+              "format_metadata": {
+                "idx_block": 2,
+                "idx_dim": 4,
+                "idx_pooled_rows": 5,
+                "position_end_exclusive": 8
+              },
+              "kind": "qsa_idx_dead",
+              "layer_index": 1,
+              "layout": "dead_key_dimension",
+              "sha256": "925883135a2cf284b328432498570622e7f281a033bfc6a957f25d4d1635b0a2",
+              "shape": [
+                4
+              ]
+            },
+            {
+              "byte_length": 80,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_idx_pooled@1",
+              "dtype": "fp32",
+              "format_metadata": {
+                "idx_block": 2,
+                "idx_dim": 4,
+                "idx_pooled_rows": 5,
+                "position_end_exclusive": 8
+              },
+              "kind": "qsa_idx_pooled",
+              "layer_index": 1,
+              "layout": "logical_pooled_row,idx_dimension",
+              "sha256": "13fe1e784f551b3782979bb70260e25cf932811019c9c62fa2a6f6425322c019",
+              "shape": [
+                5,
+                4
+              ]
+            },
+            {
+              "byte_length": 4,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "qsa_idx_block_pos@1",
+              "dtype": "int32",
+              "format_metadata": {
+                "idx_block": 2,
+                "idx_block_pos_value": 7,
+                "idx_dim": 4,
+                "idx_pooled_rows": 5,
+                "position_end_exclusive": 8
+              },
+              "kind": "qsa_idx_block_pos",
+              "layer_index": 1,
+              "layout": "scalar",
+              "sha256": "b2b7935b276ad0025051f4f25667d2612378f8863584991028f1662dfed8df45",
+              "shape": [
+                1
+              ]
+            },
+            {
+              "byte_length": 32,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "gdn_recurrence@2",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 8
+              },
+              "kind": "gdn_recurrence",
+              "layer_index": 2,
+              "layout": "key_width,value_head,key_width",
+              "sha256": "dee8568a0d7e2fdce26cd5fe381d25f3c2df00a3ce1c12b4a3752f71edf292ae",
+              "shape": [
+                2,
+                2,
+                2
+              ]
+            },
+            {
+              "byte_length": 24,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "gdn_conv_history@2",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 8
+              },
+              "kind": "gdn_conv_history",
+              "layer_index": 2,
+              "layout": "channel,history_oldest_first",
+              "sha256": "e1a5b74018df04408e8697883f41bf4beac57b73e0a15ac21e9552e2f96c533e",
+              "shape": [
+                3,
+                2
+              ]
+            },
+            {
+              "byte_length": 24,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "ple_history",
+              "dtype": "fp32",
+              "format_metadata": {
+                "position_end_exclusive": 8
+              },
+              "kind": "ple_history",
+              "layer_index": null,
+              "layout": "channel,history_oldest_first",
+              "sha256": "3e9a84d1eb4d8c455893de2e10f919b42fdef6f5e7c646c3af90049709d7f4bc",
+              "shape": [
+                3,
+                2
+              ]
+            },
+            {
+              "byte_length": 8,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "ple_previous_token_ids",
+              "dtype": "int32",
+              "format_metadata": {
+                "position_end_exclusive": 8,
+                "token_ids": [
+                  203,
+                  204
+                ]
+              },
+              "kind": "ple_previous_token_ids",
+              "layer_index": null,
+              "layout": "oldest_to_newest",
+              "sha256": "8c45740a55d23b7d75ec5271b414f855618a45b13562da0ca99bc6883fa2c206",
+              "shape": [
+                2
+              ]
+            },
+            {
+              "byte_length": 16,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "mtp_kv_key",
+              "dtype": "fp16",
+              "format_metadata": {
+                "key_rotation": "none",
+                "kv_format": "fp16",
+                "kv_mode": "ring",
+                "kv_role": "key",
+                "logical_live_position_end_exclusive": 8,
+                "logical_live_position_start": 6,
+                "page_size_cells": 2,
+                "payload_segments": [
+                  {
+                    "byte_length": 16,
+                    "logical_order": "logical_position,kv_head,head_dim",
+                    "name": "values_fp16_le",
+                    "offset_bytes": 0
+                  }
+                ],
+                "value_rotation": "none"
+              },
+              "kind": "mtp_kv_key",
+              "layer_index": null,
+              "layout": "logical_position,kv_head,head_dim",
+              "sha256": "3757e7c363457ebde7003660515c2abd2fbc667e39638ad66f00c119271ff9a2",
+              "shape": [
+                2,
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 16,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "mtp_kv_value",
+              "dtype": "fp16",
+              "format_metadata": {
+                "key_rotation": "none",
+                "kv_format": "fp16",
+                "kv_mode": "ring",
+                "kv_role": "value",
+                "logical_live_position_end_exclusive": 8,
+                "logical_live_position_start": 6,
+                "page_size_cells": 2,
+                "payload_segments": [
+                  {
+                    "byte_length": 16,
+                    "logical_order": "logical_position,kv_head,head_dim",
+                    "name": "values_fp16_le",
+                    "offset_bytes": 0
+                  }
+                ],
+                "value_rotation": "none"
+              },
+              "kind": "mtp_kv_value",
+              "layer_index": null,
+              "layout": "logical_position,kv_head,head_dim",
+              "sha256": "70249ea0cd68e6995074a2a9679a4b1d54189bec231dfab6159696e246343deb",
+              "shape": [
+                2,
+                1,
+                4
+              ]
+            },
+            {
+              "byte_length": 8,
+              "byte_order": "little",
+              "canonical_serialization": "strata_component_payload_v1",
+              "component_id": "mtp_ring_mapping",
+              "dtype": "int32",
+              "format_metadata": {
+                "logical_live_position_end_exclusive": 8,
+                "logical_live_position_start": 6,
+                "page_size_cells": 2,
+                "ring_capacity_cells": 2,
+                "ring_slots_by_logical_position": [
+                  0,
+                  1
+                ]
+              },
+              "kind": "mtp_ring_mapping",
+              "layer_index": null,
+              "layout": "logical_position_to_physical_cell_slot",
+              "sha256": "cebe2555e20e7fcf9b223716201c6fbfd2d68ec3507f80fc5e39f47fcee3b7ca",
+              "shape": [
+                2
+              ]
+            }
+          ],
+          "expected_component_counts": {
+            "gdn_conv_history": 2,
+            "gdn_recurrence": 2,
+            "mtp_kv_key": 1,
+            "mtp_kv_value": 1,
+            "mtp_ring_mapping": 1,
+            "ple_history": 1,
+            "ple_previous_token_ids": 1,
+            "qsa_idx_block_pos": 1,
+            "qsa_idx_dead": 1,
+            "qsa_idx_pooled": 1,
+            "qsa_idx_tail": 1,
+            "qsa_kv_key": 1,
+            "qsa_kv_value": 1
+          },
+          "expected_component_inventory": [
+            "gdn_recurrence@0",
+            "gdn_conv_history@0",
+            "qsa_kv_key@1",
+            "qsa_kv_value@1",
+            "qsa_idx_tail@1",
+            "qsa_idx_dead@1",
+            "qsa_idx_pooled@1",
+            "qsa_idx_block_pos@1",
+            "gdn_recurrence@2",
+            "gdn_conv_history@2",
+            "ple_history",
+            "ple_previous_token_ids",
+            "mtp_kv_key",
+            "mtp_kv_value",
+            "mtp_ring_mapping"
+          ],
+          "mtp_accepted_token_ids": [
+            801
+          ],
+          "mtp_offered_token_ids": [
+            801
+          ],
+          "native_token_ids": [
+            701,
+            711
+          ],
+          "ple_previous_token_ids": [
+            203,
+            204
+          ],
+          "position_end_exclusive": 8,
+          "position_start": 6,
+          "state_formats": {
+            "mtp": {
+              "key_rotation": "none",
+              "kv_format": "fp16",
+              "kv_mode": "ring",
+              "page_size_cells": 2,
+              "ring_slots_by_logical_position": [
+                0,
+                1
+              ],
+              "value_rotation": "none"
+            },
+            "qsa_layer_1": {
+              "idx_block_pos_value": 7,
+              "key_rotation": "none",
+              "kv_format": "fp16",
+              "kv_mode": "resident",
+              "page_size_cells": 2,
+              "value_rotation": "none"
+            }
+          }
+        }
+      ],
+      "initial_checkpoint": {
+        "capture_point": {
+          "after_prompt_cache_boundary": true,
+          "copy_completion_synchronized": true,
+          "mtp_draft_stream_synchronized": true,
+          "mutating_streams_synchronized": true
+        },
+        "components": [
+          {
+            "byte_length": 32,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "gdn_recurrence@0",
+            "dtype": "fp32",
+            "format_metadata": {
+              "position_end_exclusive": 4
+            },
+            "kind": "gdn_recurrence",
+            "layer_index": 0,
+            "layout": "key_width,value_head,key_width",
+            "sha256": "5cf89e2223a1a5a379371bde3be3c28826be08a8e9958c5132005438ab31e2d7",
+            "shape": [
+              2,
+              2,
+              2
+            ]
+          },
+          {
+            "byte_length": 24,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "gdn_conv_history@0",
+            "dtype": "fp32",
+            "format_metadata": {
+              "position_end_exclusive": 4
+            },
+            "kind": "gdn_conv_history",
+            "layer_index": 0,
+            "layout": "channel,history_oldest_first",
+            "sha256": "7d1da21d1e121070132fe08898a7330b2981ea211f20fcc1cc2136d8ced3bc5e",
+            "shape": [
+              3,
+              2
+            ]
+          },
+          {
+            "byte_length": 32,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "qsa_kv_key@1",
+            "dtype": "fp16",
+            "format_metadata": {
+              "key_rotation": "none",
+              "kv_format": "fp16",
+              "kv_mode": "resident",
+              "kv_role": "key",
+              "logical_live_position_end_exclusive": 4,
+              "logical_live_position_start": 0,
+              "page_size_cells": 2,
+              "payload_segments": [
+                {
+                  "byte_length": 32,
+                  "logical_order": "logical_position,kv_head,head_dim",
+                  "name": "values_fp16_le",
+                  "offset_bytes": 0
+                }
+              ],
+              "value_rotation": "none"
+            },
+            "kind": "qsa_kv_key",
+            "layer_index": 1,
+            "layout": "logical_position,kv_head,head_dim",
+            "sha256": "c7abcdf70edd17ae47768f01d95b64945f864a10530de66f19cf8e9a49261d87",
+            "shape": [
+              4,
+              1,
+              4
+            ]
+          },
+          {
+            "byte_length": 32,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "qsa_kv_value@1",
+            "dtype": "fp16",
+            "format_metadata": {
+              "key_rotation": "none",
+              "kv_format": "fp16",
+              "kv_mode": "resident",
+              "kv_role": "value",
+              "logical_live_position_end_exclusive": 4,
+              "logical_live_position_start": 0,
+              "page_size_cells": 2,
+              "payload_segments": [
+                {
+                  "byte_length": 32,
+                  "logical_order": "logical_position,kv_head,head_dim",
+                  "name": "values_fp16_le",
+                  "offset_bytes": 0
+                }
+              ],
+              "value_rotation": "none"
+            },
+            "kind": "qsa_kv_value",
+            "layer_index": 1,
+            "layout": "logical_position,kv_head,head_dim",
+            "sha256": "8d432eeb42015ecb8a989c67dd6f390d17e341038ecd3d613e75e4a4a34cf87d",
+            "shape": [
+              4,
+              1,
+              4
+            ]
+          },
+          {
+            "byte_length": 16,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "qsa_idx_tail@1",
+            "dtype": "fp32",
+            "format_metadata": {
+              "idx_block": 2,
+              "idx_dim": 4,
+              "idx_pooled_rows": 3,
+              "position_end_exclusive": 4
+            },
+            "kind": "qsa_idx_tail",
+            "layer_index": 1,
+            "layout": "tail_position,idx_dimension",
+            "sha256": "3dfa7de8251f628b06a19440e0d1f9bf2e5721e688d8d5e52ec0f974807b473d",
+            "shape": [
+              1,
+              4
+            ]
+          },
+          {
+            "byte_length": 16,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "qsa_idx_dead@1",
+            "dtype": "fp32",
+            "format_metadata": {
+              "idx_block": 2,
+              "idx_dim": 4,
+              "idx_pooled_rows": 3,
+              "position_end_exclusive": 4
+            },
+            "kind": "qsa_idx_dead",
+            "layer_index": 1,
+            "layout": "dead_key_dimension",
+            "sha256": "f26c4da2d96755222dfb72f65206846c7b7596947101cc710073dd912b351b7e",
+            "shape": [
+              4
+            ]
+          },
+          {
+            "byte_length": 48,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "qsa_idx_pooled@1",
+            "dtype": "fp32",
+            "format_metadata": {
+              "idx_block": 2,
+              "idx_dim": 4,
+              "idx_pooled_rows": 3,
+              "position_end_exclusive": 4
+            },
+            "kind": "qsa_idx_pooled",
+            "layer_index": 1,
+            "layout": "logical_pooled_row,idx_dimension",
+            "sha256": "77e410d0dc51f5fc63c020f5fd6104ed36427279c8109609dfcf89e38443333b",
+            "shape": [
+              3,
+              4
+            ]
+          },
+          {
+            "byte_length": 4,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "qsa_idx_block_pos@1",
+            "dtype": "int32",
+            "format_metadata": {
+              "idx_block": 2,
+              "idx_block_pos_value": 3,
+              "idx_dim": 4,
+              "idx_pooled_rows": 3,
+              "position_end_exclusive": 4
+            },
+            "kind": "qsa_idx_block_pos",
+            "layer_index": 1,
+            "layout": "scalar",
+            "sha256": "8fb51f6300ee5b051003b87f4732d5fb22f66513934865b413b8eecfb7a830ae",
+            "shape": [
+              1
+            ]
+          },
+          {
+            "byte_length": 32,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "gdn_recurrence@2",
+            "dtype": "fp32",
+            "format_metadata": {
+              "position_end_exclusive": 4
+            },
+            "kind": "gdn_recurrence",
+            "layer_index": 2,
+            "layout": "key_width,value_head,key_width",
+            "sha256": "5d2d68880688489533646c2c75145ba287e0f76a49519e59e8df5304e4f2d56b",
+            "shape": [
+              2,
+              2,
+              2
+            ]
+          },
+          {
+            "byte_length": 24,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "gdn_conv_history@2",
+            "dtype": "fp32",
+            "format_metadata": {
+              "position_end_exclusive": 4
+            },
+            "kind": "gdn_conv_history",
+            "layer_index": 2,
+            "layout": "channel,history_oldest_first",
+            "sha256": "0d5390cfe7b6a1f429cf65bb0ac68b26a65341c67475f8a23ac8dd5b083f6b9b",
+            "shape": [
+              3,
+              2
+            ]
+          },
+          {
+            "byte_length": 24,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "ple_history",
+            "dtype": "fp32",
+            "format_metadata": {
+              "position_end_exclusive": 4
+            },
+            "kind": "ple_history",
+            "layer_index": null,
+            "layout": "channel,history_oldest_first",
+            "sha256": "730ec26686b4a569acbdb2f04a2dd66cc6c330928d9596abe28f4b2fa35a4ded",
+            "shape": [
+              3,
+              2
+            ]
+          },
+          {
+            "byte_length": 8,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "ple_previous_token_ids",
+            "dtype": "int32",
+            "format_metadata": {
+              "position_end_exclusive": 4,
+              "token_ids": [
+                199,
+                200
+              ]
+            },
+            "kind": "ple_previous_token_ids",
+            "layer_index": null,
+            "layout": "oldest_to_newest",
+            "sha256": "f507354052faab8cd5d64ccda355d13f62c22ef87630ef59077f215dc9b91164",
+            "shape": [
+              2
+            ]
+          },
+          {
+            "byte_length": 16,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "mtp_kv_key",
+            "dtype": "fp16",
+            "format_metadata": {
+              "key_rotation": "none",
+              "kv_format": "fp16",
+              "kv_mode": "ring",
+              "kv_role": "key",
+              "logical_live_position_end_exclusive": 4,
+              "logical_live_position_start": 2,
+              "page_size_cells": 2,
+              "payload_segments": [
+                {
+                  "byte_length": 16,
+                  "logical_order": "logical_position,kv_head,head_dim",
+                  "name": "values_fp16_le",
+                  "offset_bytes": 0
+                }
+              ],
+              "value_rotation": "none"
+            },
+            "kind": "mtp_kv_key",
+            "layer_index": null,
+            "layout": "logical_position,kv_head,head_dim",
+            "sha256": "33a7868d568336abaa51e61f35de84bd99979978403025b08554bf706a267b7f",
+            "shape": [
+              2,
+              1,
+              4
+            ]
+          },
+          {
+            "byte_length": 16,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "mtp_kv_value",
+            "dtype": "fp16",
+            "format_metadata": {
+              "key_rotation": "none",
+              "kv_format": "fp16",
+              "kv_mode": "ring",
+              "kv_role": "value",
+              "logical_live_position_end_exclusive": 4,
+              "logical_live_position_start": 2,
+              "page_size_cells": 2,
+              "payload_segments": [
+                {
+                  "byte_length": 16,
+                  "logical_order": "logical_position,kv_head,head_dim",
+                  "name": "values_fp16_le",
+                  "offset_bytes": 0
+                }
+              ],
+              "value_rotation": "none"
+            },
+            "kind": "mtp_kv_value",
+            "layer_index": null,
+            "layout": "logical_position,kv_head,head_dim",
+            "sha256": "d4ffc6ea7337d1fc44d6b5e8bc86c634c9034160883223e1c0f55403a4f72ab3",
+            "shape": [
+              2,
+              1,
+              4
+            ]
+          },
+          {
+            "byte_length": 8,
+            "byte_order": "little",
+            "canonical_serialization": "strata_component_payload_v1",
+            "component_id": "mtp_ring_mapping",
+            "dtype": "int32",
+            "format_metadata": {
+              "logical_live_position_end_exclusive": 4,
+              "logical_live_position_start": 2,
+              "page_size_cells": 2,
+              "ring_capacity_cells": 2,
+              "ring_slots_by_logical_position": [
+                0,
+                1
+              ]
+            },
+            "kind": "mtp_ring_mapping",
+            "layer_index": null,
+            "layout": "logical_position_to_physical_cell_slot",
+            "sha256": "222f8036d8a25321388c7490c070f90dd73dc5b11e8571ec95304a9f4d49ff79",
+            "shape": [
+              2
+            ]
+          }
+        ],
+        "expected_component_counts": {
+          "gdn_conv_history": 2,
+          "gdn_recurrence": 2,
+          "mtp_kv_key": 1,
+          "mtp_kv_value": 1,
+          "mtp_ring_mapping": 1,
+          "ple_history": 1,
+          "ple_previous_token_ids": 1,
+          "qsa_idx_block_pos": 1,
+          "qsa_idx_dead": 1,
+          "qsa_idx_pooled": 1,
+          "qsa_idx_tail": 1,
+          "qsa_kv_key": 1,
+          "qsa_kv_value": 1
+        },
+        "expected_component_inventory": [
+          "gdn_recurrence@0",
+          "gdn_conv_history@0",
+          "qsa_kv_key@1",
+          "qsa_kv_value@1",
+          "qsa_idx_tail@1",
+          "qsa_idx_dead@1",
+          "qsa_idx_pooled@1",
+          "qsa_idx_block_pos@1",
+          "gdn_recurrence@2",
+          "gdn_conv_history@2",
+          "ple_history",
+          "ple_previous_token_ids",
+          "mtp_kv_key",
+          "mtp_kv_value",
+          "mtp_ring_mapping"
+        ],
+        "ple_previous_token_ids": [
+          199,
+          200
+        ],
+        "position_end_exclusive": 4,
+        "state_formats": {
+          "mtp": {
+            "key_rotation": "none",
+            "kv_format": "fp16",
+            "kv_mode": "ring",
+            "page_size_cells": 2,
+            "ring_slots_by_logical_position": [
+              0,
+              1
+            ],
+            "value_rotation": "none"
+          },
+          "qsa_layer_1": {
+            "idx_block_pos_value": 3,
+            "key_rotation": "none",
+            "kv_format": "fp16",
+            "kv_mode": "resident",
+            "page_size_cells": 2,
+            "value_rotation": "none"
+          }
+        }
+      },
+      "input_token_count": 4,
+      "input_token_ids_sha256": "3c59e26726a9083db93c94324ef22d5ed9e70dfaf04de3c7494bd68673a81b48",
+      "input_token_tail_ids": [
+        199,
+        200
+      ],
+      "request_id": "synthetic-r-01",
+      "sampler_state_sha256": "3c59e26726a9083db93c94324ef22d5ed9e70dfaf04de3c7494bd68673a81b48"
+    }
+  ],
+  "runtime_parity_claim": false,
+  "trace_kind": "native_runtime_parity_trace_v3"
+}
