@@ -102,6 +102,13 @@ parity evidence.
 
 ## Model-declared persistent-state trace v3 contract
 
-The v3 contract adds a versioned schema and CPU-only comparator for exact native token IDs and declared GDN, QSA, PLE, and MTP state at an initial prompt/cache checkpoint and each absolute commit boundary. It validates cache-count accounting, prompt-tail PLE state, accepted-MTP prefixes, model-declared layer inventories, KV layouts, ring mapping, component serialization descriptors, and synchronization declarations. The comparator rejects QSA ring mode until its mapping is defined. V2 remains unchanged; v2 records require recapture for v3 because they do not contain absolute positions or a complete component inventory.
+The [v3 contract](../../benchmarks/gfx906/fixtures/native-runtime-parity-contract-v3.json),
+[trace schema](../../benchmarks/gfx906/fixtures/native-runtime-parity-trace-v3.schema.json), and
+[CPU comparator](../../tests/gfx906/runtime_parity_v3.py) add a versioned format for exact native token IDs and
+declared GDN, QSA, PLE, and MTP state at an initial prompt/cache checkpoint and each absolute commit boundary. It
+validates cache-count accounting, prompt-tail PLE state, accepted-MTP prefixes, model-declared layer inventories,
+KV layouts, ring mapping, component serialization descriptors, and synchronization declarations. The comparator
+rejects QSA ring mode until its mapping is defined. V2 remains unchanged; v2 records require recapture for v3
+because they do not contain absolute positions or a complete component inventory.
 
 Every checked-in v3 trace is synthetic, including the model-inventory example. The comparator always returns `runtime_parity_claim=false`; it compares supplied metadata and SHA-256 digests, but cannot authenticate capture provenance, synchronization, or the bytes that produced a digest. It does not add a native capture path, prove runtime parity, run inference, or integrate AB/CD. The 64 MiB input-file bound limits serialized input size, not peak Python object memory. Run `python tools/gfx906.py test-cpu` for the comparator and schema regression suite.
