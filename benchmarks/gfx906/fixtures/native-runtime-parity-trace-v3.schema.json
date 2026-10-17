@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strata.invalid/schemas/native-runtime-parity-trace-v3.schema.json",
+  "title": "Native runtime parity trace v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "trace_kind", "mode", "evidence_class", "runtime_parity_claim", "provenance", "architecture", "requests"],
+  "properties": {
+    "contract_version": {"const": 3},
+    "trace_kind": {"const": "native_runtime_parity_trace_v3"},
+    "mode": {"enum": ["serial_off", "abcd_on"]},
+    "evidence_class": {"enum": ["synthetic_contract_only", "native_capture_unverified"]},
+    "runtime_parity_claim": {"const": false},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "architecture": {"$ref": "#/$defs/architecture"},
+    "requests": {"type": "array", "minItems": 1, "maxItems": 128, "items": {"$ref": "#/$defs/request"}}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_commit", "binary_sha256", "model_sha256", "tokenizer_sha256", "mtp_sha256", "command_sha256", "device_and_runtime", "trace_capture_method", "synthetic"],
+      "properties": {
+        "source_commit": {"type": "string", "minLength": 1},
+        "binary_sha256": {"$ref": "#/$defs/sha256"},
+        "model_sha256": {"$ref": "#/$defs/sha256"},
+        "tokenizer_sha256": {"$ref": "#/$defs/sha256"},
+        "mtp_sha256": {"$ref": "#/$defs/sha256"},
+        "command_sha256": {"$ref": "#/$defs/sha256"},
+        "device_and_runtime": {"type": "string", "minLength": 1},
+        "trace_capture_method": {"type": "string", "minLength": 1},
+        "synthetic": {"type": "boolean"}
+      }
+    },
+    "positiveInts": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}},
+    "layerList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "integer", "minimum": 0}},
+    "qsaStateFormat": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kv_format", "key_rotation", "value_rotation", "kv_mode", "page_size_cells", "idx_block_pos_value"],
+      "properties": {
+        "kv_format": {"enum": ["fp16", "int8", "q4_0", "hybrid_k8v4"]},
+        "key_rotation": {"enum": ["none", "walsh_hadamard"]},
+        "value_rotation": {"enum": ["none", "walsh_hadamard"]},
+        "kv_mode": {"enum": ["resident", "streamed"]},
+        "page_size_cells": {"type": "integer", "minimum": 1},
+        "idx_block_pos_value": {"type": "integer", "minimum": 0, "maximum": 262143}
+      }
+    },
+    "mtpStateFormat": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kv_format", "key_rotation", "value_rotation", "kv_mode", "page_size_cells", "ring_slots_by_logical_position"],
+      "properties": {
+        "kv_format": {"enum": ["fp16", "int8", "q4_0", "hybrid_k8v4"]},
+        "key_rotation": {"enum": ["none", "walsh_hadamard"]},
+        "value_rotation": {"enum": ["none", "walsh_hadamard"]},
+        "kv_mode": {"const": "ring"},
+        "page_size_cells": {"type": "integer", "minimum": 1},
+        "ring_slots_by_logical_position": {"type": "array", "maxItems": 65536, "items": {"type": "integer", "minimum": 0, "maximum": 65535}}
+      }
+    },
+    "architecture": {
+      "type": "object", "additionalProperties": false,
+      "required": ["model_family", "layer_count", "gdn_layers", "qsa_layers", "gdn_geometry", "qsa_geometry", "ple_geometry", "mtp_geometry"],
+      "properties": {
+        "model_family": {"type": "string", "minLength": 1},
+        "layer_count": {"type": "integer", "minimum": 1, "maximum": 512},
+        "gdn_layers": {"$ref": "#/$defs/layerList"},
+        "qsa_layers": {"$ref": "#/$defs/layerList"},
+        "gdn_geometry": {"type": "object", "additionalProperties": false, "required": ["state_size", "value_heads", "conv_channels", "conv_kernel"], "properties": {"state_size": {"type": "integer", "minimum": 1}, "value_heads": {"type": "integer", "minimum": 1}, "conv_channels": {"type": "integer", "minimum": 1}, "conv_kernel": {"type": "integer", "minimum": 2}}},
+        "qsa_geometry": {"type": "object", "additionalProperties": false, "required": ["idx_block", "idx_dim", "kv_heads", "head_dim", "page_size_cells"], "properties": {"idx_block": {"type": "integer", "minimum": 2}, "idx_dim": {"type": "integer", "minimum": 1}, "kv_heads": {"type": "integer", "minimum": 1}, "head_dim": {"type": "integer", "minimum": 1}, "page_size_cells": {"type": "integer", "minimum": 1}}},
+        "ple_geometry": {"type": "object", "additionalProperties": false, "required": ["history_rows", "history_channels", "previous_token_count"], "properties": {"history_rows": {"type": "integer", "minimum": 1}, "history_channels": {"type": "integer", "minimum": 1}, "previous_token_count": {"const": 2}}},
+        "mtp_geometry": {"type": "object", "additionalProperties": false, "required": ["kv_heads", "head_dim", "ring_capacity_cells", "page_size_cells"], "properties": {"kv_heads": {"type": "integer", "minimum": 1}, "head_dim": {"type": "integer", "minimum": 1}, "ring_capacity_cells": {"type": "integer", "minimum": 1, "maximum": 65536}, "page_size_cells": {"type": "integer", "minimum": 1}}}
+      }
+    },
+    "tokenIds": {"type": "array", "maxItems": 4096, "items": {"type": "integer", "minimum": 0, "maximum": 2147483647}},
+    "nonEmptyTokenIds": {"type": "array", "minItems": 1, "maxItems": 4096, "items": {"type": "integer", "minimum": 0, "maximum": 2147483647}},
+    "committedToken": {"type": "object", "additionalProperties": false, "required": ["position", "token_id"], "properties": {"position": {"type": "integer", "minimum": 0, "maximum": 262144}, "token_id": {"type": "integer", "minimum": 0, "maximum": 2147483647}}},
+    "request": {
+      "type": "object", "additionalProperties": false,
+      "required": ["request_id", "cache_key_sha256", "cache_reused_tokens", "cache_fresh_tokens", "input_token_count", "input_token_tail_ids", "input_token_ids_sha256", "sampler_state_sha256", "initial_checkpoint", "commits"],
+      "properties": {
+        "request_id": {"type": "string", "minLength": 1, "maxLength": 256},
+        "cache_key_sha256": {"$ref": "#/$defs/sha256"},
+        "cache_reused_tokens": {"type": "integer", "minimum": 0},
+        "cache_fresh_tokens": {"type": "integer", "minimum": 0},
+        "input_token_count": {"type": "integer", "minimum": 1, "maximum": 262144},
+        "input_token_tail_ids": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"type": "integer", "minimum": 0, "maximum": 2147483647}},
+        "input_token_ids_sha256": {"$ref": "#/$defs/sha256"},
+        "sampler_state_sha256": {"$ref": "#/$defs/sha256"},
+        "initial_checkpoint": {"$ref": "#/$defs/initialCheckpoint"},
+        "commits": {"type": "array", "minItems": 1, "maxItems": 100000, "items": {"$ref": "#/$defs/commit"}}
+      }
+    },
+    "component": {
+      "type": "object", "additionalProperties": false,
+      "required": ["component_id", "kind", "layer_index", "shape", "dtype", "byte_order", "layout", "canonical_serialization", "byte_length", "sha256", "format_metadata"],
+      "properties": {
+        "component_id": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "layer_index": {"type": ["integer", "null"], "minimum": 0},
+        "shape": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "integer", "minimum": 1}},
+        "dtype": {"enum": ["fp32", "fp16", "int32", "int8", "q4_0"]},
+        "byte_order": {"const": "little"},
+        "layout": {"type": "string", "minLength": 1},
+        "canonical_serialization": {"const": "strata_component_payload_v1"},
+        "byte_length": {"type": "integer", "minimum": 1, "maximum": 2147483648},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "format_metadata": {"type": "object"}
+      }
+    },
+    "commit": {
+      "type": "object", "additionalProperties": false,
+      "required": ["commit_index", "position_start", "position_end_exclusive", "committed_tokens", "native_token_ids", "mtp_offered_token_ids", "mtp_accepted_token_ids", "capture_point", "ple_previous_token_ids", "state_formats", "expected_component_counts", "expected_component_inventory", "components"],
+      "properties": {
+        "commit_index": {"type": "integer", "minimum": 0},
+        "position_start": {"type": "integer", "minimum": 0, "maximum": 262144},
+        "position_end_exclusive": {"type": "integer", "minimum": 1, "maximum": 262144},
+        "committed_tokens": {"type": "array", "minItems": 1, "maxItems": 4096, "items": {"$ref": "#/$defs/committedToken"}},
+        "native_token_ids": {"$ref": "#/$defs/nonEmptyTokenIds"},
+        "mtp_offered_token_ids": {"$ref": "#/$defs/tokenIds"},
+        "mtp_accepted_token_ids": {"$ref": "#/$defs/tokenIds"},
+        "ple_previous_token_ids": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": -1, "maximum": 2147483647}},
+        "state_formats": {
+          "type": "object", "required": ["mtp"], "additionalProperties": false,
+          "properties": {"mtp": {"$ref": "#/$defs/mtpStateFormat"}},
+          "patternProperties": {"^qsa_layer_[0-9]+$": {"$ref": "#/$defs/qsaStateFormat"}}
+        },
+        "capture_point": {"type": "object", "additionalProperties": false, "required": ["after_verifier_commit", "mutating_streams_synchronized", "mtp_draft_stream_synchronized", "copy_completion_synchronized"], "properties": {"after_verifier_commit": {"const": true}, "mutating_streams_synchronized": {"const": true}, "mtp_draft_stream_synchronized": {"const": true}, "copy_completion_synchronized": {"const": true}}},
+        "expected_component_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "expected_component_inventory": {"type": "array", "minItems": 1, "maxItems": 160, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "components": {"type": "array", "minItems": 1, "maxItems": 160, "items": {"$ref": "#/$defs/component"}}
+      }
+    },
+    "initialCheckpoint": {
+      "type": "object", "additionalProperties": false,
+      "required": ["position_end_exclusive", "capture_point", "ple_previous_token_ids", "state_formats", "expected_component_counts", "expected_component_inventory", "components"],
+      "properties": {
+        "position_end_exclusive": {"type": "integer", "minimum": 1, "maximum": 262144},
+        "capture_point": {"type": "object", "additionalProperties": false, "required": ["after_prompt_cache_boundary", "mutating_streams_synchronized", "mtp_draft_stream_synchronized", "copy_completion_synchronized"], "properties": {"after_prompt_cache_boundary": {"const": true}, "mutating_streams_synchronized": {"const": true}, "mtp_draft_stream_synchronized": {"const": true}, "copy_completion_synchronized": {"const": true}}},
+        "ple_previous_token_ids": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": -1, "maximum": 2147483647}},
+        "state_formats": {"$ref": "#/$defs/commit/properties/state_formats"},
+        "expected_component_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "expected_component_inventory": {"type": "array", "minItems": 1, "maxItems": 160, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "components": {"type": "array", "minItems": 1, "maxItems": 160, "items": {"$ref": "#/$defs/component"}}
+      }
+    }
+  }
+}

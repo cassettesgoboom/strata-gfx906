@@ -1,0 +1,48 @@
+{
+  "contract_version": 3,
+  "trace_kind": "native_runtime_parity_trace_v3",
+  "purpose": "Compare exact native committed token IDs and complete declared persistent state at equal absolute commit boundaries.",
+  "evidence_class": "contract_only_no_measurement",
+  "runtime_parity_claim": false,
+  "architecture_policy": "The schema is model- and hardware-agnostic. Each trace declares model layer count, the complete disjoint GDN/QSA layer partition, component geometry, MTP ring geometry, expected per-kind counts, and the ordered component inventory. The validator derives the required inventory and tensor sizes from that declaration and rejects omissions or inconsistent counts. A model-specific inventory belongs only in a clearly marked synthetic fixture.",
+  "preserved_legacy_contracts": {
+    "v2": "tests/gfx906/abcd_parity.py remains the v2 comparator with its original commit_index, emitted-token-list, state-digest, and provenance semantics. This v3 contract does not reinterpret or modify v2.",
+    "v2_to_v3_migration": "There is no lossless automatic migration. V2 has no absolute committed token positions and its opaque recurrent_state_sha256 does not identify or inventory QSA, PLE, or MTP state components. A v2 trace must be recaptured at v3 boundaries; copying or synthesizing missing fields is invalid."
+  },
+  "comparison_requirements": {
+    "matched_provenance": [
+      "source_commit", "binary_sha256", "model_sha256", "tokenizer_sha256",
+      "mtp_sha256", "command_sha256", "device_and_runtime", "trace_capture_method"
+    ],
+    "matched_request_fields": [
+      "request_id", "cache_key_sha256", "cache_reused_tokens", "cache_fresh_tokens",
+      "input_token_count", "input_token_tail_ids", "input_token_ids_sha256", "sampler_state_sha256", "initial_checkpoint"
+    ],
+    "input_token_tail_ids": "Declare the last one or two exact prompt token IDs (one ID for a one-token prompt). The initial PLE predecessor pair must equal this tail padded on the left with -1 when needed.",
+    "initial_checkpoint": "Capture the complete persistent state immediately after prompt/cache restoration and prompt prefill have reached the same absolute input_token_count boundary, before the first decode commit. Compare all GDN, QSA, PLE, and MTP state components just like later commits.",
+    "boundary": "For each commit compare the same request ID and exact absolute committed position interval [position_start, position_end_exclusive). Position/token pairs are ordered, unique, contiguous, and compared before decoding or serialization.",
+    "native_token_ids": "Preserve the v2 meaning: ordered token IDs emitted by this native transaction/window. Compare the entire list exactly. The separate committed_tokens list identifies the IDs consumed by the verifier through this state boundary.",
+    "mtp": "Compare exact ordered offered and accepted proposal IDs at each boundary, including empty lists.",
+    "persistent_state": "At every commit boundary require all inventoried GDN, QSA, PLE, and MTP components. Each digest is SHA-256 over the component's canonical little-endian contiguous bytes after QSA/MTP KV are copied into logical accepted-prefix order. Compare inventory descriptors, state metadata, and digests exactly. Missing, duplicated, truncated, extra, reordered, or malformed components fail closed.",
+    "qsa": "For every declared QSA layer include live K and V through the accepted prefix in logical position order, plus idx_tail, idx_dead, idx_pooled active rows including the spare row, and idx_block_pos. Include KV encoding/rotation, cache mode, page/ring geometry, live range, and indexer geometry metadata.",
+    "mtp": "Accepted MTP token IDs must be an exact ordered prefix of the offered IDs. Include both K and V over the complete live logical ring prefix, a canonical logical-to-physical ring mapping component, and ring capacity/page/format/rotation/live-range metadata.",
+    "ple": "The initial predecessor pair equals the declared prompt tail, left-padded with -1 when the prompt has one token. At each later boundary, roll the pair forward using every committed input token ID in absolute position order and require exact equality with captured PLE predecessor IDs.",
+    "qsa_kv_modes": "QSA K/V mode is resident or streamed. Ring mode is reserved for MTP, whose complete live ring mapping is declared; QSA ring capture is rejected until an equivalent mapping contract exists.",
+    "canonical_component_serialization": "SHA-256 covers only the canonical raw component payload: contiguous elements in the declared logical layout, little-endian scalar encoding, with deterministic quantized payload segments. INT8 K/V codes are concatenated first in logical position/head/dimension order, followed by FP16 scales in position/head/64-value-group order at the declared byte offset. Q4_0 is position/head/dimension-block order; each 18-byte block is an FP16 scale followed by 16 packed bytes, where element j occupies the low nibble and element j+16 the high nibble. Hybrid K8V4 uses the INT8 K segment then its scales for K, and Q4_0 blocks for V. Segment offsets and lengths are declared in every K/V component. Padding, unused capacity, page slack, and allocator addresses are excluded. Component kind/layer/shape/dtype/layout/format metadata are independently mandatory and compared.",
+    "provenance": "Capture/provenance authenticity is not established by this CPU comparator. Synthetic fixtures are explicitly marked and never produce a runtime parity claim."
+  },
+  "bounds": {
+    "requests": 128,
+    "commits_per_request": 100000,
+    "total_commits_per_trace": 4096,
+    "total_components_per_trace": 262144,
+    "trace_document_bytes": 67108864,
+    "token_ids_per_list": 4096,
+    "input_tokens_per_request": 262144,
+    "live_context_cells": 262144,
+    "mtp_ring_capacity_cells": 65536,
+    "components_per_commit": 160,
+    "component_byte_length": 2147483648
+  },
+  "cpu_check": "python3 -m unittest tests.gfx906.test_runtime_parity_v3"
+}
