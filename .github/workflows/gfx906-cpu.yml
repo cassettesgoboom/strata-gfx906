@@ -11,6 +11,8 @@ on:
       - 'include/strata/core/verify.hpp'
       - 'src/core/verify.cpp'
       - 'src/program/generate.cpp'
+      - 'include/strata/program/native_trace_id.hpp'
+      - 'tests/program/native_trace_id_test.cpp'
       - 'serve/server.py'
       - 'serve/replicas.py'
       - 'serve/native_trace.py'
@@ -30,6 +32,8 @@ on:
       - 'include/strata/core/verify.hpp'
       - 'src/core/verify.cpp'
       - 'src/program/generate.cpp'
+      - 'include/strata/program/native_trace_id.hpp'
+      - 'tests/program/native_trace_id_test.cpp'
       - 'serve/server.py'
       - 'serve/replicas.py'
       - 'serve/native_trace.py'
@@ -60,6 +64,10 @@ jobs:
         run: python -m pip install 'jinja2==3.1.6' 'markupsafe==3.0.3'
       - name: Native request correlation contract
         run: python -m unittest serve.test_native_trace serve.test_replicas
+      - name: Native trace ID parser contract
+        run: |
+          c++ -std=c++20 -Wall -Wextra -Werror -Iinclude tests/program/native_trace_id_test.cpp -o "$RUNNER_TEMP/native_trace_id_test"
+          "$RUNNER_TEMP/native_trace_id_test"
       - name: Batch transaction lifecycle contract
         run: |
           c++ -std=c++20 -Wall -Wextra -Werror -Iinclude tests/core/batch_transaction_test.cpp -o "$RUNNER_TEMP/batch_transaction_test"
