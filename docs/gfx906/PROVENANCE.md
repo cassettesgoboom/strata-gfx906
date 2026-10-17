@@ -24,7 +24,7 @@ archived binary or a reproduction from the fork source snapshot reviewed at `af4
 upstream main `477ac13cbe8e582c20484871ce459d20d82df09d`. Do not claim that the current public source fork
 reproduces the image.
 
-The public fork's [PR #11](https://github.com/cassettesgoboom/strata-gfx906/pull/11) adds an archived MI50 measurements table to the README; [PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds CPU-only synthetic trace comparison tooling. Neither PR changes the engine, container, tag, or image digest above. The comparator's successful comparison is not runtime parity evidence and does not update the archived image's provenance.
+The current fork main checked on 2026-10-18 is [`78de7f56e5977ed351d147155cbc4af1696a553c`](https://github.com/cassettesgoboom/strata-gfx906/commit/78de7f56e5977ed351d147155cbc4af1696a553c). Its changes after the reviewed engine-source snapshot are documentation, parity-contract/tests, and benchmark-config redaction; they do not change the native runtime. The public fork's [PR #11](https://github.com/cassettesgoboom/strata-gfx906/pull/11) adds an archived MI50 measurements table to the README; [PR #12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds CPU-only synthetic trace comparison tooling. Neither PR changes the engine, container, tag, or image digest above. The comparator's successful comparison is not runtime parity evidence and does not update the archived image's provenance.
 
 An archived network-isolated pullback of the OCI index digest above recorded these in-container executable hashes:
 

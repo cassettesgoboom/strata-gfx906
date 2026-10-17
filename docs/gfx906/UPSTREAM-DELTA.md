@@ -43,6 +43,8 @@ Public [PR #4](https://github.com/cassettesgoboom/strata-gfx906/pull/4) remains 
 
 The complete PR #4 patch does not apply to either current tree. `git apply --check` fails on `CMakeLists.txt`, `serve/server.py`, `src/core/verify.cpp`, and `src/program/generate.cpp` against upstream v0.1.45; it also fails on `include/strata/core/verify.hpp` against fork main. The verifier and generator APIs have moved since the v0.1.41 base, so this is not a clean cherry-pick or a small context refresh.
 
+A source-level recheck against upstream v0.1.45 found the PR #4 shared-draft-head assignment `dhead_type_ = shared->dhead_type_` is already present in `src/core/mtp.cpp`; that hunk is not a forward-port candidate. The PR #4 `dvocab_host_ = shared->dvocab_host_` assignment and per-slot `MropeScope` are absent from v0.1.45. The latter overlaps the per-slot MRoPE work still under upstream PR #1242; absence from upstream does not make either hunk safe to copy independently of the session/lifetime design below.
+
 | PR #4 path | Disposition against current sources |
 | --- | --- |
 | `CMakeLists.txt` | **Incompatible:** old test-registration context does not apply; the vision and MRoPE test intent needs current build integration. |
