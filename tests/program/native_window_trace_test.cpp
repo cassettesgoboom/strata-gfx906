@@ -6,6 +6,15 @@
 
 int main() {
     using strata::program::serial_window_record;
+    using strata::program::validate_window_trace_config;
+    using Error = strata::program::WindowTraceConfigError;
+    assert(validate_window_trace_config(false, false, true, true) == Error::none);
+    assert(validate_window_trace_config(true, false, true, true) == Error::none);
+    assert(validate_window_trace_config(false, true, false, false) == Error::requires_base_trace);
+    assert(validate_window_trace_config(true, true, true, false) == Error::unsupported_execution_mode);
+    assert(validate_window_trace_config(true, true, false, true) == Error::unsupported_execution_mode);
+    assert(validate_window_trace_config(true, true, false, false) == Error::none);
+
     const std::string id(32, 'a');
     assert(serial_window_record(id, 0, {42, 7, 19}, 2, 3) ==
            "strata correctness: request=" + id + " state=native_window_commit window=0 "

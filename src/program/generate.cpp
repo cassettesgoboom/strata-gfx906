@@ -9859,8 +9859,16 @@ int main(int argc, char** argv) {
         long long admit_max_new = 0;
         const char* correctness_trace_env = std::getenv("STRATA_CORRECTNESS_TRACE");
         const bool correctness_trace = correctness_trace_env != nullptr && std::strcmp(correctness_trace_env, "1") == 0;
-        if (correctness_trace && (o.batch > 0 || o.pipeline_windows > 0)) {
-            std::fprintf(stderr, "strata serve: STRATA_CORRECTNESS_TRACE currently supports serial windows only; "
+        const char* window_trace_env = std::getenv("STRATA_CORRECTNESS_WINDOW_TRACE");
+        const bool correctness_window_trace = window_trace_env != nullptr && std::strcmp(window_trace_env, "1") == 0;
+        const auto window_trace_config = strata::program::validate_window_trace_config(
+            correctness_trace, correctness_window_trace, o.batch > 0, o.pipeline_windows > 0);
+        if (window_trace_config == strata::program::WindowTraceConfigError::requires_base_trace) {
+            std::fprintf(stderr, "strata serve: STRATA_CORRECTNESS_WINDOW_TRACE requires STRATA_CORRECTNESS_TRACE=1\n");
+            return 2;
+        }
+        if (window_trace_config == strata::program::WindowTraceConfigError::unsupported_execution_mode) {
+            std::fprintf(stderr, "strata serve: STRATA_CORRECTNESS_WINDOW_TRACE supports serial windows only; "
                                  "disable --batch and --pipeline-windows\n");
             return 2;
         }
@@ -12734,6 +12742,11 @@ int main(int argc, char** argv) {
                     std::printf("ERR %s\n", err.c_str());
                     return 1;
                 }
+                if (correctness_window_trace && !ver.wait_commit(err)) {
+                    if (adapt_thr.joinable()) adapt_thr.join();
+                    std::printf("ERR %s\n", err.c_str());
+                    return 1;
+                }
                 if (nonfinite_hit(ver, first_window ? "first decode" : "decode")) {   // #879: none of its tokens goes out
                     if (adapt_thr.joinable()) adapt_thr.join();
                     if (!adapt_ok) {
@@ -12750,9 +12763,9 @@ int main(int argc, char** argv) {
                 first_window = false;
                 bool eos = false;
                 std::vector<int32_t> trace_token_ids;
-                if (correctness_trace) trace_token_ids.reserve((size_t) (a + 1));
+                if (correctness_window_trace) trace_token_ids.reserve((size_t) (a + 1));
                 for (int i = 0; i <= a && produced_n < max_new && !eos; ++i) {
-                    if (correctness_trace) trace_token_ids.push_back(outv[(size_t) i]);
+                    if (correctness_window_trace) trace_token_ids.push_back(outv[(size_t) i]);
                     std::printf("T %d\n", (int) outv[(size_t) i]);
                     strata::core::progress_beat();
                     ++produced_n;
@@ -12761,7 +12774,7 @@ int main(int argc, char** argv) {
                     eos = std::find(o.eos_ids.begin(), o.eos_ids.end(), (int64_t) outv[(size_t) i]) != o.eos_ids.end();
                 }
                 std::fflush(stdout);
-                if (correctness_trace) {
+                if (correctness_window_trace) {
                     // Suffix lookup replaces MTP; chained tokens beyond T_mtp are not MTP decisions.
                     const int64_t mtp_offered = use_mtp && !from_sfx ? T_mtp - 1 : 0;
                     const int64_t mtp_accepted = std::min<int64_t>(a, mtp_offered);

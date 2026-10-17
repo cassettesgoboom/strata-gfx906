@@ -8,6 +8,16 @@
 
 namespace strata::program {
 
+enum class WindowTraceConfigError { none, requires_base_trace, unsupported_execution_mode };
+
+inline WindowTraceConfigError validate_window_trace_config(bool base_trace, bool window_trace,
+                                                           bool batch, bool pipeline) {
+    if (!window_trace) return WindowTraceConfigError::none;
+    if (!base_trace) return WindowTraceConfigError::requires_base_trace;
+    if (batch || pipeline) return WindowTraceConfigError::unsupported_execution_mode;
+    return WindowTraceConfigError::none;
+}
+
 // Describes one successfully committed serial verify transaction. Token IDs are
 // exactly the ordered IDs emitted by that transaction, not a claim about state
 // after each individual token.
