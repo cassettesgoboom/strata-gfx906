@@ -137,6 +137,8 @@ namespace strata::metal_engine { void set_model_shard(const char* shard1); }   /
 #include <set>
 #include <vector>
 
+#include "strata/program/native_trace_id.hpp"
+
 namespace {
 // Windows' WDDM driver model: native Windows, or WSL2 (its GPU goes through /dev/dxg to the Windows driver).  There,
 // pinning a large arena into two CUDA contexts leaves WDDM refusing every later allocation (the 5080 + 3090 rig);
@@ -9810,6 +9812,7 @@ int main(int argc, char** argv) {
         // ---- --batch: the slots of the batch windows
         struct BSlot {
             bool active = false, stop = false;
+            std::string trace_id;          ///< opt-in correctness trace correlation; empty in the legacy protocol
             int32_t x = 0;                 ///< the token the next window feeds (not yet in the slot's state)
             std::array<int32_t, strata::kernels::kVerifyMaxT> draft{}; ///< the slot's next MTP proposal
             bool draft_ready = false;
@@ -9853,6 +9856,8 @@ int main(int argc, char** argv) {
         Clock::time_point bt_start = Clock::now();
         int admit_slot = -1;               ///< the slot the request being read will continue in (BGEN)
         long long admit_max_new = 0;
+        const char* correctness_trace_env = std::getenv("STRATA_CORRECTNESS_TRACE");
+        const bool correctness_trace = correctness_trace_env != nullptr && std::strcmp(correctness_trace_env, "1") == 0;
         auto batch_on = [&] { for (const BSlot& b : bs) if (b.active) return true; return false; };
         auto try_next_line = [&](std::string& out) -> bool {
             std::lock_guard<std::mutex> lk(in_mu);
@@ -10063,6 +10068,9 @@ int main(int argc, char** argv) {
                                  (long long) pos[first[t]]);
                     const double ms = std::chrono::duration<double, std::milli>(Clock::now() - sl.t0).count();
                     std::printf("BDONE %d %lld nonfinite %.1f\n", b, (long long) sl.produced, ms);
+                    if (correctness_trace && !sl.trace_id.empty())
+                        std::fprintf(stderr, "strata correctness: request=%s slot=%d state=native_leg_complete finish=nonfinite produced=%lld\n",
+                                     sl.trace_id.c_str(), b, (long long) sl.produced);
                     sl.active = false;
                     sl.cached = false;
                     sl.checks.clear();
@@ -10080,6 +10088,9 @@ int main(int argc, char** argv) {
                     if (fin != nullptr) {
                         const double ms = std::chrono::duration<double, std::milli>(Clock::now() - sl.t0).count();
                         std::printf("BDONE %d %lld %s %.1f\n", b, (long long) sl.produced, fin, ms);
+                        if (correctness_trace && !sl.trace_id.empty())
+                            std::fprintf(stderr, "strata correctness: request=%s slot=%d state=native_leg_complete finish=%s produced=%lld\n",
+                                         sl.trace_id.c_str(), b, fin, (long long) sl.produced);
                         sl.active = false;
                         sl.cached = o.prompt_cache > 0 && !sl.img && !sl.tainted;
                         break;
@@ -10221,6 +10232,9 @@ int main(int argc, char** argv) {
                                      gi * GS + t, (long long) sl.p);
                         const double ms = std::chrono::duration<double, std::milli>(Clock::now() - sl.t0).count();
                         std::printf("BDONE %d %lld nonfinite %.1f\n", gi * GS + t, (long long) sl.produced, ms);
+                        if (correctness_trace && !sl.trace_id.empty())
+                            std::fprintf(stderr, "strata correctness: request=%s slot=%d state=native_leg_complete finish=nonfinite produced=%lld\n",
+                                         sl.trace_id.c_str(), gi * GS + t, (long long) sl.produced);
                         sl.active = false;
                         sl.cached = false;
                         sl.checks.clear();
@@ -10238,6 +10252,9 @@ int main(int argc, char** argv) {
                     if (fin != nullptr) {
                         const double ms = std::chrono::duration<double, std::milli>(Clock::now() - sl.t0).count();
                         std::printf("BDONE %d %lld %s %.1f\n", gi * GS + t, (long long) sl.produced, fin, ms);
+                        if (correctness_trace && !sl.trace_id.empty())
+                            std::fprintf(stderr, "strata correctness: request=%s slot=%d state=native_leg_complete finish=%s produced=%lld\n",
+                                         sl.trace_id.c_str(), gi * GS + t, fin, (long long) sl.produced);
                         sl.active = false;
                         // a pipelined slot is a cache again (#857: a request left alone in its slot goes back to the solo path with its
                         // drafts): its state is final once its last window has left the last stage.  A later group window whose pad
@@ -10359,7 +10376,7 @@ int main(int argc, char** argv) {
                 }
                 admit_slot = (int) b;
                 admit_max_new = mn;
-                line = std::string(bimg ? "GENI 1" : "GEN 1") + e2;
+                line = strata::program::rewrite_batch_admission(bimg, e2);
             }
             // #477: every --expert-profile-save-every minutes, before the next request (at QUIT: after the loop)
             if (!heat.empty() && line != "QUIT" && o.expert_profile_save_min > 0 &&
@@ -10668,6 +10685,7 @@ int main(int argc, char** argv) {
             // in prompt order.  With them the conversation cache matches a picture by its key and grid, not by its
             // embedding floats, so a picture encoded again with other bits still matches.  Absent: the embeddings' hash.
             std::vector<uint64_t> req_img_keys;
+            strata::program::NativeTraceId req_trace_id;
             if (endp != nullptr) {   // GENI takes the same keys (#75: image requests were always greedy); its
                                      // embedding file path is the first token without an =
                 for (;;) {
@@ -10708,7 +10726,22 @@ int main(int argc, char** argv) {
                             if (*qe != ',' && *qe != '\0') { req_img_keys.clear(); break; }
                         }
                     }
+                    else if (key == "trace_id") {
+                        req_trace_id.add(tok.substr(eq + 1));
+                    }
                     // unknown keys are skipped: the ids start at the first token without '='
+                }
+            }
+            if (correctness_trace) {
+                const auto trace_error = req_trace_id.validate(true);
+                bool duplicate = false;
+                for (const BSlot& slot : bs)
+                    duplicate = duplicate || (slot.active && slot.trace_id == req_trace_id.value());
+                if (trace_error != strata::program::NativeTraceId::Error::none || duplicate) {
+                    const char* why = duplicate ? "duplicate" : strata::program::NativeTraceId::error_text(trace_error);
+                    std::printf("ERR %s correctness trace request ID\n", why);
+                    std::fflush(stdout);
+                    continue;
                 }
             }
             std::vector<float> req_bias;
@@ -12940,6 +12973,9 @@ int main(int argc, char** argv) {
                         (long long) (src.ram_reads() - ram0), (long long) (src.file_reads() - files0),
                         (double) (src.file_read_bytes() - file_bytes0) / 1e6, (long long) read_n,
                         (long long) req_offload, chain_txt);
+            if (correctness_trace && admit_slot < 0)
+                std::fprintf(stderr, "strata correctness: request=%s slot=-1 state=native_leg_complete finish=%s produced=%lld\n",
+                             req_trace_id.value().c_str(), finish, (long long) produced_n);
             std::fflush(stdout);
             if (admit_slot >= 0) {   // --batch: BADM <slot> <1 = continues in the batch windows | 0 = done>
                 bool cont = !cancelled && produced_n == 1 && admit_max_new > 1 && std::strcmp(finish, "length") == 0 &&
@@ -12959,6 +12995,7 @@ int main(int argc, char** argv) {
                     sl.p = p;
                     sl.produced = 1;
                     sl.max_new = admit_max_new;
+                    sl.trace_id = req_trace_id.value();
                     sl.t0 = Clock::now();
                     sl.ids = live;
                     if (batch_mtp) {
@@ -12982,6 +13019,9 @@ int main(int argc, char** argv) {
                                  (long long) live.size(), std::chrono::duration<double, std::milli>(Clock::now() - tc0).count());
                 }
                 std::printf("BADM %d %d\n", admit_slot, cont ? 1 : 0);
+                if (correctness_trace && !cont)
+                    std::fprintf(stderr, "strata correctness: request=%s slot=%d state=native_leg_complete finish=%s produced=%lld\n",
+                                 req_trace_id.value().c_str(), admit_slot, finish, (long long) produced_n);
                 std::fflush(stdout);
                 admit_slot = -1;
             }

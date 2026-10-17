@@ -143,6 +143,36 @@ class RouteChoice(unittest.TestCase):
         self.assertEqual(ReplicaEngine([FakeEngine(4), FakeEngine(4)]).batch, 8)
         self.assertEqual(ReplicaEngine([FakeEngine(0), FakeEngine(0)]).batch, 2)
 
+    def test_correctness_request_id_reaches_selected_replica(self):
+        class Correlated(FakeEngine):
+            def __init__(self):
+                super().__init__(0)
+                self.request_id = None
+
+            def generate(self, ids, max_new, sampling, cancel, embeddings=None, request_id=None):
+                self.request_id = request_id
+                yield 19
+
+        a, b = Correlated(), Correlated()
+        e = ReplicaEngine([a, b])
+        rid = "a" * 32
+        with mock.patch.dict("os.environ", {"STRATA_CORRECTNESS_TRACE": "1"}), \
+                mock.patch.object(e, "route", return_value=1):
+            self.assertEqual(list(e.generate([1], 1, {}, threading.Event(), request_id=rid)), [19])
+        self.assertIsNone(a.request_id)
+        self.assertEqual(b.request_id, rid)
+
+    def test_trace_rejects_replica_without_request_id_support_before_routing(self):
+        e = ReplicaEngine([FakeEngine(0), FakeEngine(0)])
+        route = mock.Mock(side_effect=AssertionError("routing must not begin"))
+        rid = "b" * 32
+        with mock.patch.dict("os.environ", {"STRATA_CORRECTNESS_TRACE": "1"}), \
+                mock.patch.object(e, "route", route):
+            with self.assertRaisesRegex(RuntimeError, "requires request_id support"):
+                list(e.generate([1], 1, {}, threading.Event(), request_id=rid))
+        route.assert_not_called()
+        self.assertEqual(e.inflight, [0, 0])
+
 
 class ReplicaService(unittest.TestCase):
     def start(self, slots=4, n=2):
