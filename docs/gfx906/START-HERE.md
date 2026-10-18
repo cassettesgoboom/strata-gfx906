@@ -41,7 +41,9 @@ identities in any new report. Historical throughput measurements are not evidenc
 ## Checked-in CLI
 
 The checked-in gfx906 command entry point is [`tools/gfx906.py`](../../tools/gfx906.py). Run
-`python tools/gfx906.py doctor` and `python tools/gfx906.py test-cpu` without a GPU. The `build-gfx906` and
+`python tools/gfx906.py doctor` without a GPU. In a fresh Python environment, install the pinned schema-test
+dependency with `python -m pip install -r tests/gfx906/requirements-schema.txt`, then run
+`python tools/gfx906.py test-cpu`. The `build-gfx906` and
 `bench-p2`/`bench-p3`/`bench-p4` commands print dry-run plans by default; their `--apply` modes require explicit
 inputs. `bench-validate` checks the structure of a versioned evidence record, and `report` renders one. The HTTP
 load commands do not establish native decode occupancy or a cached strict-overlap benchmark.
