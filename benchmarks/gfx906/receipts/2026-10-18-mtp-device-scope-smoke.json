@@ -84,6 +84,7 @@
     "The smoke used the archived runtime image as a base with the PR-source native binary and Python source bind-mounted; it does not validate a new or pulled distribution image.",
     "The native prompt reuse count of 146/151 applies to the first follow-up attempt; the corrected same-prefix replay has no direct native reuse counter and is not represented as meeting the 98 percent benchmark gate.",
     "The run had no MTP accepted/offered counters, so MTP proposal activity or acceptance is not claimed despite the configured serial-MTP path.",
+    "The run did not compare pre-change behavior or verify the changed device-scope path, so it does not establish that the PR fixes a reproduced runtime defect.",
     "The smoke does not establish sustained throughput, AB/CD behavior, exact native-token parity, recurrent-state parity, or production readiness."
   ]
 }

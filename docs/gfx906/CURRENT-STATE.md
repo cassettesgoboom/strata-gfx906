@@ -53,8 +53,9 @@ A short model-backed serial smoke then exercised the PR-source native binary on 
 [`2026-10-18 MTP device-scope smoke receipt`](../../benchmarks/gfx906/receipts/2026-10-18-mtp-device-scope-smoke.json)
 records its exact source/binary identity and limits. The archived runtime image was used as a base with the new
 binary and Python source bind-mounted; no new image was built or published. Serial MTP was configured, but no
-offered/accepted counters were captured, so draft activity is not claimed. No token/state parity or AB/CD runtime
-validation was performed; issue #24 remains open.
+offered/accepted counters were captured, so draft activity is not claimed. The smoke does not establish that the
+PR change fixes a reproduced runtime defect. No token/state parity or AB/CD runtime validation was performed;
+issue #24 remains open.
 
 **Reviewed engine-source snapshot (checked 2026-10-17 UTC):** the reviewed fork `main` at that source review was
 [`af45b70bf5cb7e61a0e0825c632397190a97e18b`](https://github.com/cassettesgoboom/strata-gfx906/commit/af45b70bf5cb7e61a0e0825c632397190a97e18b),
