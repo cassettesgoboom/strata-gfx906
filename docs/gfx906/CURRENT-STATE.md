@@ -71,7 +71,7 @@ not add GPU or parity validation.
 - **Source base:** upstream `296b59d2f73c8f04a805df29c2fa97655adace78`.
 - **Archived native binary:** SHA-256 `ae93901c79771ace15db52942523c25fc46dd6f0d6a3b43698b28e6071c472cb`.
 - **Archived OCI index:** `sha256:a7527bd8efe2dcdb0a0a7fd6b96761507ce79f9d585ce1649ce5b91158258a29`.
-- **Public fork:** main retains upstream ancestry and [PR #2](https://github.com/cassettesgoboom/strata-gfx906/pull/2) is merged. The current `test-cpu` suite passes 77 tests; this does not validate GPU execution. A clean-checkout onboarding review used only public files.
+- **Public fork:** main retains upstream ancestry and [PR #2](https://github.com/cassettesgoboom/strata-gfx906/pull/2) is merged. The current `test-cpu` suite passes 78 tests; this does not validate GPU execution. A clean-checkout onboarding review used only public files.
 - **Merged build fixes:** [PR #6](https://github.com/cassettesgoboom/strata-gfx906/pull/6) merged alias fix `8c30f4744f8df7a7ce71805959e426116b271410`; [PR #7](https://github.com/cassettesgoboom/strata-gfx906/pull/7) merged the Blackwell W4A4 CMake exclusion `b65fdb01810fa11914a2c21bef5468b5dee5a623`.
 - **Pre-merge main-equivalent build receipt:** combined gfx906 HIP Release/Ninja build succeeded in an isolated networkless container with a 6 GiB memory limit. It used ROCm clang `23.0.0git`, GGML/llama.cpp commit `3cf03257f219afbe7334045ff7c6a06ac68c627d`, and source base `02f500b8056f9cc7af27dfa577476e69eaab75a6` before the merged fixes. The associated smoke receipt maps the tested binary to pre-merge fork main `64185a40962121b9adfc20e0e1a45b634cfeb472`; it is not a build of post-merge main at the earlier 2026-10-17 checkpoint (audited checkpoint SHA `73e01b3a5f1c577899e3f668e7e913759a1f7455`). The newly produced local binary SHA-256 is `73a0f98105938850c749a3f0ed1dfe08e1753a97379aa9741c7fb73351c0137c`. Its CPU-only `--help` path succeeded and 30 CPU tooling tests passed. See the [machine-readable build receipt](../../benchmarks/gfx906/receipts/2026-10-16-current-main-equivalent.json) and [exact patch bundle](../../benchmarks/gfx906/receipts/2026-10-16-current-main-equivalent.patch) for toolchain, source, command, and artifact details.
 - **Build and smoke boundary:** this build did not reproduce the pinned historical benchmarked binary (`ae93901c79771ace15db52942523c25fc46dd6f0d6a3b43698b28e6071c472cb`). The separate [GPU smoke receipt](../../benchmarks/gfx906/receipts/2026-10-16-current-main-gpu-smoke.json) identifies its source-equivalent fork main as pre-merge commit `64185a40962121b9adfc20e0e1a45b634cfeb472` and the tested native binary SHA-256 as `73a0f98105938850c749a3f0ed1dfe08e1753a97379aa9741c7fb73351c0137c`. It records short serial inference on dual MI50: 146 generated tokens on a first request, then 130 on a continuation with 70 native reused prompt tokens; MTP accepted/offered totals were 173/208. The server and binary were mounted into the archived runtime image. No new image was published. No rebuild or GPU smoke is recorded for post-merge main at the 2026-10-17 checkpoint (audited checkpoint SHA `73e01b3a5f1c577899e3f668e7e913759a1f7455`). These short requests do not establish sustained performance, batch AB/CD, or exact token/state parity; archived benchmark measurements below remain scoped to the pinned binary.
@@ -184,3 +184,24 @@ smoke. It used the archived runtime image as a base with the PR-source binary an
 no image was built or published. It had no MTP accepted/offered counters. No defect or call-site runtime failure
 was reproduced, and the smoke did not exercise the changed device-scoping path. This change does not port AB/CD,
 establish token or recurrent-state parity, or qualify a production image.
+
+**Current-main validation after PR #49 (2026-10-18):** [PR #49](https://github.com/cassettesgoboom/strata-gfx906/pull/49)
+merged at [`fe16acb527ac593c2f8037b6d4883bede131597e`](https://github.com/cassettesgoboom/strata-gfx906/commit/fe16acb527ac593c2f8037b6d4883bede131597e).
+Its hosted CPU workflow [run `39086817840`](https://github.com/cassettesgoboom/strata-gfx906/actions/runs/39086817840)
+succeeded. A fresh `python tools/gfx906.py test-cpu` run at this
+revision passed 78 tests. These checks validate CPU tooling only.
+
+The PR #41 [HIP build receipt](../../benchmarks/gfx906/receipts/2026-10-17-mtp-device-scope-hip-build.json)
+records binary SHA-256 `3e6d46636e5671c5920b374ce55202dadbf2e111e5db3e8ba4fb46b69ae701c8` for an isolated,
+compile-only gfx906 HIP Release build. It records base commit
+`3f076fea5a98f69d2fec1d364b21380eb1a67e95` and these changed native-file fingerprints:
+`include/strata/core/mtp.hpp` `e9d7c23e8c8617d621fd94c466d8463bd80ed063867735f48ab2b0aeb6091ad6`,
+`src/core/mtp.cpp` `5f97261e06660162b374d80499cf95735d25ac84106196fb11f58ac640156d83`. The build receipt has no
+explicit built Git commit. The fingerprints match the PR #41 runtime change commit
+`7face86d0eb42712a068a19fdb7d661ecfe4755d`, its merge `9efd4da532b041be4cdef273e8da6cbd946a49d2`, and
+current main at PR #49 merge `fe16acb527ac593c2f8037b6d4883bede131597e`; neither native-source path changed
+between the PR #41 merge and that current-main revision. This binary is not the archived benchmark binary
+`ae93901c79771ace15db52942523c25fc46dd6f0d6a3b43698b28e6071c472cb`. The build receipt establishes neither
+source reproduction nor inference or parity. The separate smoke receipt records short serial inference, but
+does not establish that the changed device-scoping path was exercised, MTP proposal activity, token parity, or
+persistent recurrent-state parity.
