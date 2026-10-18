@@ -51,11 +51,18 @@
       "container_memory_limit_bytes": 6442450944,
       "gpu_access": false,
       "model_assets_mounted": false,
-      "network_during_compile": true
+      "network_during_compile": true,
+      "apt_update_exit_code": 0,
+      "apt_install_exit_code": 0,
+      "cmake_configure_exit_code": 0,
+      "ninja_completed_steps": "147/147",
+      "ninja_exit_code": 0,
+      "initial_artifact_lookup_exit_code": 1,
+      "initial_artifact_lookup_note": "The chained wrapper checked /build/bin/strata, which was not this target's output path. A separate no-network check located /build/strata, verified its SHA-256, resolved dynamic dependencies, and passed --help."
     },
     "command": "apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cmake ninja-build; cmake -S /src/strata -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSTRATA_ENABLE_CUDA=ON -DSTRATA_HIP_GFX906=ON -DCMAKE_HIP_ARCHITECTURES=gfx906 -DSTRATA_GGML_DIR=/src/llama.cpp -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++; ninja -C /build -j2 strata",
     "exit_code": 0,
-    "log_ref": "local-only build log retained outside the repository; Ninja completed 147/147 steps; the binary was located at /build/strata"
+    "log_ref": "Local-only build log retained outside the repository; the Ninja build completed 147/147 steps. The first wrapper returned 1 only on its post-build path probe; a separate no-network check verified the actual /build/strata artifact."
   },
   "artifact": {
     "name": "compile-only gfx906 Strata binary; not a release artifact or the archived benchmark binary",
