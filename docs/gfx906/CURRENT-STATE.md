@@ -153,13 +153,23 @@ abort; then build from a pinned current-main revision and run an isolated GPU co
 native token IDs and recurrent-state hashes at matching window ends. Keep AB/CD opt-in until those runtime checks
 pass. Archived source-to-image proof remains open.
 
-**Open source-review candidate (2026-10-18):** [PR #41](https://github.com/cassettesgoboom/strata-gfx906/pull/41)
-scopes MTP idle synchronization and resource cleanup to the drafter's captured CUDA/HIP device. Its isolated gfx906
-HIP compile and CPU checks are recorded in
-[`2026-10-17-mtp-device-scope-hip-build.json`](../../benchmarks/gfx906/receipts/2026-10-17-mtp-device-scope-hip-build.json).
-A short model-backed serial smoke exercised the PR-source native binary; the separate
-[`2026-10-18 MTP device-scope smoke receipt`](../../benchmarks/gfx906/receipts/2026-10-18-mtp-device-scope-smoke.json)
-records source and binary identities and limitations. The archived runtime image was used as a base with the new
-binary and Python source mounted; no new image was published. The smoke does not prove a reproduced defect or
-exercise the device-scoping change directly. It did not test AB/CD, MTP counters, exact token parity, or recurrent-
-state parity. The PR remains unmerged and does not change current-main behavior.
+**PR #41 merged in current main (2026-10-18):** [PR #41](https://github.com/cassettesgoboom/strata-gfx906/pull/41)
+merged at [`9efd4da532b041be4cdef273e8da6cbd946a49d2`](https://github.com/cassettesgoboom/strata-gfx906/commit/9efd4da532b041be4cdef273e8da6cbd946a49d2).
+Its narrow change uses the existing `OnDevice` scope around `MtpDrafter::idle()` stream synchronization and
+destructor cleanup, selecting the CUDA/HIP device captured by that drafter and restoring the caller's device.
+It does not change scheduling, MTP acceptance, model arithmetic, or AB/CD behavior.
+
+PR validation recorded 77 passing tests from `python tools/gfx906.py test-cpu`, a passing workflow-equivalent C++20
+fake-runtime compile/run, and a passing CPU CMake target `on_device_scope_test` with CTest 1/1 using the pinned
+local llama.cpp dependency. The isolated Release/Ninja gfx906 HIP `strata` target completed 147/147 steps;
+`ldd` resolved all dependencies and `strata --help` passed with no GPU devices or model assets. The
+[compile receipt](../../benchmarks/gfx906/receipts/2026-10-17-mtp-device-scope-hip-build.json) records the
+toolchain, dependency and binary identity. The CPU helper test covers `OnDevice`; it would not fail if either
+MTP call-site guard were removed.
+
+The separate [2026-10-18 smoke receipt](../../benchmarks/gfx906/receipts/2026-10-18-mtp-device-scope-smoke.json)
+preserves the source and binary provenance for a short model-backed serial inference and conversation-reuse
+smoke. It used the archived runtime image as a base with the PR-source binary and Python server source mounted;
+no image was built or published. It had no MTP accepted/offered counters. No defect or call-site runtime failure
+was reproduced, and the smoke did not exercise the changed device-scoping path. This change does not port AB/CD,
+establish token or recurrent-state parity, or qualify a production image.
