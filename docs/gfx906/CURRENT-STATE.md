@@ -33,15 +33,15 @@ change does not resolve the separate raw diagnostic callback lifetime or
 general graph/session teardown contract, and it does not port AB/CD. Issue #24
 remains open.
 
-**Current fork main (checked 2026-10-18):**
-[`3f076fea5a98f69d2fec1d364b21380eb1a67e95`](https://github.com/cassettesgoboom/strata-gfx906/commit/3f076fea5a98f69d2fec1d364b21380eb1a67e95).
-Since the reviewed engine-source snapshot below, PR [#37](https://github.com/cassettesgoboom/strata-gfx906/pull/37)
-refreshed public state and provenance, PR [#38](https://github.com/cassettesgoboom/strata-gfx906/pull/38)
-clarified the synthetic v3 command-identity contract, PR
-[#39](https://github.com/cassettesgoboom/strata-gfx906/pull/39) redacted local roots from three benchmark
-configuration snapshots, and PR [#40](https://github.com/cassettesgoboom/strata-gfx906/pull/40) refreshed the
-source-status record. These commits change documentation, parity-contract/tests, or benchmark configuration
-records; they do not add a native AB/CD runtime port or new GPU/parity evidence. Fork main remains based on
+**Reviewed current-source snapshot (checked 2026-10-18):** fork `main` at the engine-source review resolved to
+[`3f076fea5a98f69d2fec1d364b21380eb1a67e95`](https://github.com/cassettesgoboom/strata-gfx906/commit/3f076fea5a98f69d2fec1d364b21380eb1a67e95),
+merged by PR [#40](https://github.com/cassettesgoboom/strata-gfx906/pull/40). Earlier PRs
+[#37](https://github.com/cassettesgoboom/strata-gfx906/pull/37), [#38](https://github.com/cassettesgoboom/strata-gfx906/pull/38),
+and [#39](https://github.com/cassettesgoboom/strata-gfx906/pull/39) updated public state, parity-contract/tests,
+and sanitized benchmark configuration snapshots. Later PR [#42](https://github.com/cassettesgoboom/strata-gfx906/pull/42)
+refreshed documentation, and PR [#43](https://github.com/cassettesgoboom/strata-gfx906/pull/43) registered existing
+native trace helper tests with CMake/CTest. Those follow-up changes do not modify inference runtime behavior, add
+a native AB/CD runtime port, or provide new GPU/parity evidence. Fork main retains ancestry from
 [upstream `Niko1221/Strata`](https://github.com/Niko1221/Strata), and the latest upstream release checked here is
 [v0.1.45](https://github.com/Niko1221/Strata/releases/tag/v0.1.45).
 
