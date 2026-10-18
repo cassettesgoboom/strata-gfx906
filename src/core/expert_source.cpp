@@ -527,8 +527,11 @@ bool file_tier_unbuffered(const std::vector<std::string>& paths, uint64_t arena_
     // #1194: the experts read from the files are a skewed set: a cache holding a twentieth of them (at least 1.5 GiB)
     // serves most of the repeats, and beat the unbuffered reads at every room measured (it reads 2 to 7 times less from
     // the drive).  `avail` already has what this process and the cgroup hold taken off, so 1 GiB is left for the rest.
-    const bool keepable = strata::platform::file_cache_keeps(avail, arena_bytes, read_bytes, 1ull << 30, 0.05,
-                                                             3ull << 29);
+    // Upstream #1752 (KevinX8, 1d6fd9f): on gfx906, ROCm queues can be suspended while reclaim works around the
+    // HMM-tracked arena; keep the older full-read room rule there by default. The Linux override permits comparing or
+    // reverting either rule.
+    const bool keepable = strata::platform::file_cache_keeps_for_tier(
+        avail, arena_bytes, read_bytes, std::getenv("STRATA_FILE_CACHE_OLD_RULE"));
     char msg[256];
     std::snprintf(msg, sizeof msg, "%.1f GiB available, %.1f GiB of it still to be taken by the RAM copy, %.1f GiB "
                   "of experts read from the files: the file cache %s keep the ones that come back",

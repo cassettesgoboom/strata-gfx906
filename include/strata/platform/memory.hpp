@@ -60,6 +60,25 @@ inline bool file_cache_keeps(uint64_t avail, uint64_t arena_bytes, uint64_t read
     return room >= need;
 }
 
+/// #1752: the gfx906 file tier keeps the older full-read cache rule by default. Other builds use the measured Linux
+/// hot-read rule. STRATA_FILE_CACHE_OLD_RULE=1/0 overrides that default; pass the environment value here so the
+/// selection stays independently testable without a GPU runtime.
+constexpr bool file_cache_old_rule_default() {
+#if defined(STRATA_HIP_GFX906)
+    return true;
+#else
+    return false;
+#endif
+}
+
+inline bool file_cache_keeps_for_tier(uint64_t avail, uint64_t arena_bytes, uint64_t read_bytes,
+                                      const char* old_rule_override) {
+    bool old_rule = file_cache_old_rule_default();
+    if (old_rule_override != nullptr && old_rule_override[0] != '\0') old_rule = old_rule_override[0] != '0';
+    return old_rule ? file_cache_keeps(avail, arena_bytes, read_bytes)
+                    : file_cache_keeps(avail, arena_bytes, read_bytes, 1ull << 30, 0.05, 3ull << 29);
+}
+
 /// Whether `advise_willneed` asks the OS for anything: not on Windows, nor with STRATA_READ_AHEAD=0.
 bool read_ahead_enabled();
 /// Asks the OS to start reading [p, p + bytes) of a file mapping, without waiting.  Linux reads at most one

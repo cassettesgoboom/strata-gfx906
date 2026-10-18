@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "receipt_id": "2026-10-18-pr1752-gfx906-hip-build",
+  "source": {
+    "repository": "https://github.com/cassettesgoboom/strata-gfx906",
+    "commit": "294fe5248273ec1a9c7331d81d0708ce8e66423c",
+    "dirty": true,
+    "patch_bundle_ref": "benchmarks/gfx906/receipts/2026-10-18-pr1752-file-cache-policy.patch.gz",
+    "patch_bundle_sha256": "922913bef49ad86ee16c73fbf6835362bc0ec02a086d8bb9838df6a86c560e79"
+  },
+  "target": {
+    "architecture": "gfx906"
+  },
+  "toolchain": {
+    "compiler": "AMD clang",
+    "compiler_version": "23.0.0git",
+    "rocm_version": "7.14.60850-0000000",
+    "components": [
+      {
+        "name": "builder image",
+        "version": "cassettesgoboom/strata-gfx906",
+        "revision": "sha256:cff67a01ce2365a93a3b43a6e46694da3a28cfb7daf229fae5180ab92dc2295a"
+      },
+      {
+        "name": "llama.cpp",
+        "version": "3cf03257f219afbe7334045ff7c6a06ac68c627d",
+        "revision": "3cf03257f219afbe7334045ff7c6a06ac68c627d"
+      },
+      {
+        "name": "CMake",
+        "version": "3.28.3-1build7"
+      },
+      {
+        "name": "Ninja",
+        "version": "1.11.1-2"
+      }
+    ]
+  },
+  "build": {
+    "system": "Linux container, memory limit 6 GiB, no GPU devices or model assets; source and pinned llama.cpp mounted read-only; apt package install used Ubuntu snapshot index before compilation",
+    "generator": "Ninja",
+    "configuration": "Release",
+    "options": {
+      "STRATA_ENABLE_CUDA": true,
+      "STRATA_HIP_GFX906": true,
+      "CMAKE_HIP_ARCHITECTURES": "gfx906",
+      "STRATA_GGML_DIR": "/src/llama.cpp",
+      "CMAKE_C_COMPILER": "/opt/rocm/llvm/bin/clang",
+      "CMAKE_CXX_COMPILER": "/opt/rocm/llvm/bin/clang++",
+      "STRATA_BUILD_TESTS": false,
+      "container_memory_limit_bytes": 6442450944,
+      "gpu_access": false,
+      "model_assets_mounted": false,
+      "network_during_compile": true
+    },
+    "command": "apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cmake ninja-build; cmake -S /src/strata -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSTRATA_ENABLE_CUDA=ON -DSTRATA_HIP_GFX906=ON -DCMAKE_HIP_ARCHITECTURES=gfx906 -DSTRATA_GGML_DIR=/src/llama.cpp -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++; ninja -C /build -j2 strata",
+    "exit_code": 0,
+    "log_ref": "local-only build log retained outside the repository; Ninja completed 147/147 steps; the binary was located at /build/strata"
+  },
+  "artifact": {
+    "name": "compile-only gfx906 Strata binary; not a release artifact or the archived benchmark binary",
+    "sha256": "805ffbf38e0e0030f99f7b62b96aa129350d96fe016d08e580abab3fe98806f8",
+    "size_bytes": 26238128
+  }
+}

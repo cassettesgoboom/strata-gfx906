@@ -19,6 +19,12 @@ uint64_t gib(double g) { return (uint64_t) (g * 1073741824.0); }
 // #577: the file tier's unbuffered choice (true = the file cache keeps its reads, so they stay buffered)
 int file_cache_keeps_cases() {
     using strata::platform::file_cache_keeps;
+    using strata::platform::file_cache_keeps_for_tier;
+#if defined(STRATA_HIP_GFX906)
+    static_assert(strata::platform::file_cache_old_rule_default());
+#else
+    static_assert(!strata::platform::file_cache_old_rule_default());
+#endif
     struct Case { const char* what; double avail, arena, read; bool keeps; };
     const double experts = 71.7;   // UD-Q4_K_XL's routed experts
     const Case cases[] = {
@@ -69,12 +75,31 @@ int file_cache_keeps_cases() {
                     got == c.keeps ? "" : "   <-- WRONG");
         fail |= got != c.keeps;
     }
+    // #1752: gfx906 defaults to the old full-read rule; other platforms retain the newer hot-read rule, and the
+    // explicit override selects either rule. These inputs make the two policies disagree.
+    const uint64_t avail = gib(5.75), arena = 0, reads = gib(10.0);
+    const struct TierCase { const char* what; const char* override; bool keeps; } tier_cases[] = {
+        {"compile-time default selects expected policy", nullptr, !strata::platform::file_cache_old_rule_default()},
+        {"empty override preserves compile-time default", "", !strata::platform::file_cache_old_rule_default()},
+        {"override 0 selects hot-read rule", "0", true},
+        {"override 1 selects old full-read rule", "1", false},
+    };
+    for (const TierCase& c : tier_cases) {
+        const bool got = file_cache_keeps_for_tier(avail, arena, reads, c.override);
+        std::printf("file_cache_keeps_for_tier %-45s -> %s%s\n", c.what, got ? "buffered" : "unbuffered",
+                    got == c.keeps ? "" : "   <-- WRONG");
+        fail |= got != c.keeps;
+    }
     return fail;
 }
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
     int fail_keeps = file_cache_keeps_cases();
+    if (argc == 2 && std::strcmp(argv[1], "--policy-only") == 0) {
+        std::printf("platform_memory_test policy: %s\n", fail_keeps ? "FAILED" : "OK");
+        return fail_keeps;
+    }
     const uint64_t bytes = 256ull << 20;
     void* p = std::malloc(bytes);
     if (p == nullptr) return 2;
