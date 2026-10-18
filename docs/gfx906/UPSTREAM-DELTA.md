@@ -23,9 +23,17 @@ This note maps gfx906-relevant features to public upstream commits observed on 2
   explicit device drain followed by session recovery/discard acknowledgement before retirement. Validation is 44
   Python tests plus a separate focused C++20 transaction test. The contract remains unwired to `Verifier`/scheduler and implements no inference,
   QSA rollback, GPU transaction isolation, or parity.
+- [PR #52](https://github.com/cassettesgoboom/strata-gfx906/pull/52) selectively ports upstream [commit
+  `1d6fd9f97ab09da231b35cbbd84a2879adb6d77f`](https://github.com/Niko1221/Strata/commit/1d6fd9f97ab09da231b35cbbd84a2879adb6d77f)
+  (#1752, KevinX8): on Linux, gfx906 defaults to the older full-read file-cache rule; other Linux builds retain the
+  hot-read rule. `STRATA_FILE_CACHE_OLD_RULE=1` selects the older rule and `STRATA_FILE_CACHE_OLD_RULE=0` selects the
+  hot-read rule. The existing
+  `STRATA_UNBUFFERED_LOAD` force setting takes precedence. The checked-in HIP receipt is compile-only and records
+  no GPU devices; no local MI50 runtime or performance comparison was run. This narrow file-tier policy change does
+  not alter AB/CD or establish inference parity.
 
-These fork PRs document archived evidence and add CPU-side future-validation scaffolding. They do not alter the
-upstream feature history below or supply new source-to-image provenance. The
+The earlier fork PRs document archived evidence and add CPU-side future-validation scaffolding. PR #52 is a selective
+source port of one gfx906-specific upstream fix; it does not supply new source-to-image provenance. The
 [current-main blockers in Issue #1](https://github.com/cassettesgoboom/strata-gfx906/issues/1) remain: the lifecycle
 registry is not wired into `Verifier` or the scheduler; per-slice graph, staging, and poll ownership is not
 integrated; and the registry's commit-intent/result and recovery gates are not connected to actual device work.
@@ -73,6 +81,7 @@ Upstream v0.1.45 exposes `batch_launch`/`batch_poll`, `commit_slot_prefixes(cons
 | K8/V4 KV cache | [`3597c47ff8cd`](https://github.com/Niko1221/Strata/commit/3597c47ff8cd490dccfdafa2bd9d9b80ba9aa255) (2026-09-29) | Adds the hybrid K8/V4 cache and `--kv k8v4`. |
 | Refreshed-residency batch servicing (#1102 equivalent) | [`7ef55e19599f`](https://github.com/Niko1221/Strata/commit/7ef55e19599f1ef009894b3260b40cdbe0d59ba9) (2026-10-07) | Upstream #1118 changes the batch graph/service decision to use per-window `ar_on()` residency. Its commit message identifies #1102 as the same fix for `run_slot_rows()` and `batch_poll()`; #1118 also updates `service()`. This is an upstream equivalent behavior, not evidence that the archived binary contains either commit. |
 | Serial batch-MTP windows | [`a0116b2782a5`](https://github.com/Niko1221/Strata/commit/a0116b2782a5b82622358c04a06496485d12b2d6) (2026-10-12) | Adds/retains serial MTP windows with `STRATA_BATCH_MTP_SERIAL=1` or `--batch-groups 1`; the commit states that the default layer-split pipeline takes precedence over `--batch-mtp`. This is the current upstream behavior, not a source attribution for the archived image. |
+| gfx906 Linux file-tier cache rule | [`1d6fd9f97ab0`](https://github.com/Niko1221/Strata/commit/1d6fd9f97ab09da231b35cbbd84a2879adb6d77f) (2026-10-15) | Upstream #1752 keeps the older full-read rule by default on gfx906, with `STRATA_FILE_CACHE_OLD_RULE=1/0`; fork PR #52 selectively ports this policy. Its compile receipt is not MI50 runtime or performance validation. |
 
 ## Relationship to #1242 and #1253
 
