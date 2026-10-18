@@ -34,12 +34,13 @@ general graph/session teardown contract, and it does not port AB/CD. Issue #24
 remains open.
 
 **Current fork main (checked 2026-10-18):**
-[`78de7f56e5977ed351d147155cbc4af1696a553c`](https://github.com/cassettesgoboom/strata-gfx906/commit/78de7f56e5977ed351d147155cbc4af1696a553c).
+[`3f076fea5a98f69d2fec1d364b21380eb1a67e95`](https://github.com/cassettesgoboom/strata-gfx906/commit/3f076fea5a98f69d2fec1d364b21380eb1a67e95).
 Since the reviewed engine-source snapshot below, PR [#37](https://github.com/cassettesgoboom/strata-gfx906/pull/37)
 refreshed public state and provenance, PR [#38](https://github.com/cassettesgoboom/strata-gfx906/pull/38)
-clarified the synthetic v3 command-identity contract, and PR
+clarified the synthetic v3 command-identity contract, PR
 [#39](https://github.com/cassettesgoboom/strata-gfx906/pull/39) redacted local roots from three benchmark
-configuration snapshots. These commits change documentation, parity-contract/tests, or benchmark configuration
+configuration snapshots, and PR [#40](https://github.com/cassettesgoboom/strata-gfx906/pull/40) refreshed the
+source-status record. These commits change documentation, parity-contract/tests, or benchmark configuration
 records; they do not add a native AB/CD runtime port or new GPU/parity evidence. Fork main remains based on
 [upstream `Niko1221/Strata`](https://github.com/Niko1221/Strata), and the latest upstream release checked here is
 [v0.1.45](https://github.com/Niko1221/Strata/releases/tag/v0.1.45).
