@@ -118,3 +118,5 @@ rejects QSA ring mode until its mapping is defined. V2 remains unchanged; v2 rec
 because they do not contain absolute positions or a complete component inventory.
 
 Every checked-in v3 trace is synthetic, including the model-inventory example. The comparator always returns `runtime_parity_claim=false`; it compares supplied metadata and SHA-256 digests, but cannot authenticate capture provenance, synchronization, or the bytes that produced a digest. It does not add a native capture path, prove runtime parity, run inference, or integrate AB/CD. The 64 MiB input-file bound limits serialized input size, not peak Python object memory. Run `python tools/gfx906.py test-cpu` for the comparator and schema regression suite.
+
+PR [#47](https://github.com/cassettesgoboom/strata-gfx906/pull/47) additionally requires both traces to declare the same evidence class before comparing them. Equality output repeats the declared class and explicitly sets `capture_authenticated=false`. This prevents a mixed synthetic/unverified pair from being labeled equal; it does not authenticate either capture or change the synthetic-only status of checked-in traces.
