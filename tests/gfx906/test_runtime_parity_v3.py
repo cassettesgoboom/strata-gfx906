@@ -25,8 +25,19 @@ class RuntimeParityV3Tests(unittest.TestCase):
         self.assertTrue(result["equal"], result)
         self.assertTrue(result["synthetic_contract_only"])
         self.assertFalse(result["runtime_parity_claim"])
+        self.assertEqual(result["evidence_class"], "synthetic_contract_only")
+        self.assertFalse(result["capture_authenticated"])
         self.assertEqual(result["state_comparison_boundary"], "absolute_committed_position_interval_end")
         self.assertIn("cannot authenticate capture", result["warning"])
+
+    def test_synthetic_fixture_cannot_compare_equal_to_unverified_capture(self):
+        unverified = deepcopy(self.candidate)
+        unverified["evidence_class"] = "native_capture_unverified"
+        unverified["provenance"]["synthetic"] = False
+        result = parity.compare(self.serial, unverified)
+        self.assertFalse(result["equal"])
+        self.assertIn("evidence_class differs", result["first_divergence"])
+        self.assertFalse(result["runtime_parity_claim"])
 
     def test_command_digest_mismatch_is_rejected(self):
         changed = deepcopy(self.candidate)

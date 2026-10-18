@@ -458,6 +458,8 @@ def compare(serial: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]
         right, _ = _index_trace(candidate, "candidate")
         _need(serial["mode"] == "serial_off", "serial.mode must be serial_off")
         _need(candidate["mode"] == "abcd_on", "candidate.mode must be abcd_on")
+        _need(serial["evidence_class"] == candidate["evidence_class"],
+              "evidence_class differs; synthetic fixtures cannot be paired with unverified native captures")
         for field in PROVENANCE_FIELDS:
             _need(left["provenance"][field] == right["provenance"][field], f"provenance.{field} differs")
         _need(left["architecture"] == right["architecture"], "architecture/model-declared inventory differs")
@@ -477,6 +479,7 @@ def compare(serial: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]
                 for field in ("state_formats", "expected_component_counts", "expected_component_inventory", "components"):
                     _need(ac[field] == bc[field], f"request {rid} commit {index}: {field} differs")
         return {"equal": True, "runtime_parity_claim": False,
+                "evidence_class": serial["evidence_class"], "capture_authenticated": False,
                 "synthetic_contract_only": serial["provenance"]["synthetic"] or candidate["provenance"]["synthetic"],
                 "state_comparison_boundary": "absolute_committed_position_interval_end",
                 "warning": "Equality compares supplied descriptors and SHA-256 digests only. It cannot authenticate capture, synchronization, provenance, or the source bytes; independent native evidence is required.",
