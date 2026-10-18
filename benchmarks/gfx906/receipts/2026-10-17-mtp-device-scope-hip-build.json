@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-17T23:52:59Z",
+  "validation_kind": "isolated compile-only gfx906 HIP build",
+  "source": {
+    "repository": "cassettesgoboom/strata-gfx906",
+    "base_commit": "3f076fea5a98f69d2fec1d364b21380eb1a67e95",
+    "changed_native_files": [
+      {
+        "path": "include/strata/core/mtp.hpp",
+        "sha256": "e9d7c23e8c8617d621fd94c466d8463bd80ed063867735f48ab2b0aeb6091ad6"
+      },
+      {
+        "path": "src/core/mtp.cpp",
+        "sha256": "5f97261e06660162b374d80499cf95735d25ac84106196fb11f58ac640156d83"
+      }
+    ]
+  },
+  "dependency": {
+    "name": "llama.cpp",
+    "commit": "3cf03257f219afbe7334045ff7c6a06ac68c627d"
+  },
+  "builder": {
+    "image": "docker.io/cassettesgoboom/strata-gfx906@sha256:cff67a01ce2365a93a3b43a6e46694da3a28cfb7daf229fae5180ab92dc2295a",
+    "platform": "linux/amd64",
+    "rocm_hip_compiler": "Clang 23.0.0",
+    "hip_architecture": "gfx906"
+  },
+  "configuration": {
+    "build_type": "Release",
+    "generator": "Ninja",
+    "STRATA_ENABLE_CUDA": true,
+    "STRATA_HIP_GFX906": true,
+    "STRATA_BUILD_TESTS": false,
+    "CMAKE_HIP_ARCHITECTURES": "gfx906",
+    "native_tests_in_this_build": false,
+    "gpu_devices_visible": false,
+    "model_assets_mounted": false
+  },
+  "result": {
+    "status": "pass",
+    "target": "strata",
+    "completed_ninja_steps": "147/147",
+    "binary_sha256": "3e6d46636e5671c5920b374ce55202dadbf2e111e5db3e8ba4fb46b69ae701c8",
+    "cli_help": "pass",
+    "dynamic_dependencies": "all ldd dependencies resolved in the pinned builder image",
+    "gpu_inference": "not run"
+  },
+  "limitations": [
+    "This compile artifact is not the archived benchmark executable and does not reproduce its SHA-256.",
+    "No GPU runtime, inference, exact token parity, or persistent recurrent-state parity was tested.",
+    "The validation covers the HIP gfx906 build; a native NVIDIA CUDA build was not run."
+  ]
+}

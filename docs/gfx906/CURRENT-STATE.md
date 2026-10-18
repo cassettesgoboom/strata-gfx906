@@ -152,3 +152,14 @@ including slice-local resource ownership, device drain, and recovery of affected
 abort; then build from a pinned current-main revision and run an isolated GPU comparison against serial for ordered
 native token IDs and recurrent-state hashes at matching window ends. Keep AB/CD opt-in until those runtime checks
 pass. Archived source-to-image proof remains open.
+
+**Open source-review candidate (2026-10-18):** [PR #41](https://github.com/cassettesgoboom/strata-gfx906/pull/41)
+scopes MTP idle synchronization and resource cleanup to the drafter's captured CUDA/HIP device. Its isolated gfx906
+HIP compile and CPU checks are recorded in
+[`2026-10-17-mtp-device-scope-hip-build.json`](../../benchmarks/gfx906/receipts/2026-10-17-mtp-device-scope-hip-build.json).
+A short model-backed serial smoke exercised the PR-source native binary; the separate
+[`2026-10-18 MTP device-scope smoke receipt`](../../benchmarks/gfx906/receipts/2026-10-18-mtp-device-scope-smoke.json)
+records source and binary identities and limitations. The archived runtime image was used as a base with the new
+binary and Python source mounted; no new image was published. The smoke does not prove a reproduced defect or
+exercise the device-scoping change directly. It did not test AB/CD, MTP counters, exact token parity, or recurrent-
+state parity. The PR remains unmerged and does not change current-main behavior.
