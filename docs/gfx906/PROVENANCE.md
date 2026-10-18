@@ -36,18 +36,9 @@ An archived network-isolated pullback of the OCI index digest above recorded the
 
 The same archived receipt reported ROCm runtime `7.14.0-gfx906+20260802001858` and HIP configuration `7.14.60850-0000000`. These are archived pullback observations, not a fresh live inspection. They identify executable contents in that pulled artifact but do not make the source build reproducible from the current fork.
 
-## Quiet-build source fingerprints
+## Quiet-build source limitations
 
-The main-verified preserved quiet binary SHA matches the published pullback engine SHA above. Its quiet source snapshot fingerprints were:
-
-| File | SHA-256 |
-| --- | --- |
-| `generate.cpp` | `f5d25aacb04fafde201632fa3fd2729431a8a425a36ff8f79938bcbfae0b4b54` |
-| `verify.cpp` | `51bd2a6457e0c344d929faef08956823eeedde7f5f95493f45827fadaa120956` |
-
-The archived quiet delta patch SHA-256 is `4abf258a82d27d195184f73f53700f9dc68736727e61a388bcce528f7497c083`; the patch remains private and unpublished pending review. The recorded build cache configuration was Release, gfx906, ROCm clang++. The source snapshot has no `.git` metadata, so its exact coherent commit and a reproducible rebuild are unknown. These fingerprints are evidence identifiers, not a claim that the source snapshot or patch is publicly available.
-
-A separate private reconstruction check applied archived per-file patches to copies of the recorded pre-quiet source files: base SHA-256 `534203ef0ee46245e4e60960c26930e0e2346c99bf332f7df7a4139a8ae01e9b` for `generate.cpp`, and `403f1338439390d0bd3e93fe067d1af434739a02ec9976f30cb4eedad7a15061` for `verify.cpp`. The `generate.cpp` patch artifact SHA-256 is `c9b67076fc661bfebaa7e48768c06ae3fd5c969029f8188e7e4f4eeb53db16e6`; the `verify.cpp` patch artifact SHA-256 is `43b0036675615fa30f7a14ad3a7ca5acc60ebd24ffa5ac26bf61a9e072db09e9`. Applying each patch to a copy of its corresponding base file produced the final file fingerprints in the table above. These per-file patch artifacts are separate from the combined patch artifact listed above. This check establishes those two file-content fingerprints only. It does not establish a complete source tree, a coherent Git commit, the full build inputs, or that the published executable was compiled from those exact files. The patch artifacts remain private and are not part of this repository.
+The archived quiet-build record associates the preserved executable with the published pullback engine SHA above and records a Release, gfx906 build using ROCm clang++. The source snapshot has no `.git` metadata. No publicly reviewable coherent source and patch set establishes its exact commit, full build inputs, or a reproducible build of the published executable. Private source and patch artifacts are not included or fingerprinted here; their existence does not establish source-to-binary provenance.
 
 The source delta and review status are in [UPSTREAM-DELTA.md](UPSTREAM-DELTA.md). No private host, network, storage, container, or telemetry paths are part of this record.
 
