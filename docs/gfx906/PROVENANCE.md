@@ -26,6 +26,10 @@ reproduces the image.
 
 The fork source snapshot reviewed after PR [#40](https://github.com/cassettesgoboom/strata-gfx906/pull/40) is [`3f076fea5a98f69d2fec1d364b21380eb1a67e95`](https://github.com/cassettesgoboom/strata-gfx906/commit/3f076fea5a98f69d2fec1d364b21380eb1a67e95). Later PR [#42](https://github.com/cassettesgoboom/strata-gfx906/pull/42) refreshed documentation, and PR [#43](https://github.com/cassettesgoboom/strata-gfx906/pull/43) registered existing native trace helper tests with CMake/CTest; neither changes the inference runtime. Earlier PR [#11](https://github.com/cassettesgoboom/strata-gfx906/pull/11) adds archived MI50 measurements to the README, and PR [#12](https://github.com/cassettesgoboom/strata-gfx906/pull/12) adds CPU-only synthetic trace comparison tooling. These records do not change the engine, container, tag, or image digest above. The comparator's successful comparison is not runtime parity evidence and does not update the archived image's provenance.
 
+## Current-source compile-only artifact
+
+PR [#52](https://github.com/cassettesgoboom/strata-gfx906/pull/52) selectively ports upstream [commit `1d6fd9f97ab09da231b35cbbd84a2879adb6d77f`](https://github.com/Niko1221/Strata/commit/1d6fd9f97ab09da231b35cbbd84a2879adb6d77f). Its [build receipt](../../benchmarks/gfx906/receipts/2026-10-18-pr1752-gfx906-hip-build.json) records a compile-only gfx906 HIP artifact with SHA-256 `805ffbf38e0e0030f99f7b62b96aa129350d96fe016d08e580abab3fe98806f8`, built from fork base `294fe5248273ec1a9c7331d81d0708ce8e66423c` plus the receipt's exact patch bundle. This artifact is not the published image, does not contain model assets, and is not the archived native executable listed above. No MI50 inference/performance validation or AB/CD token/state parity is established by this build.
+
 An archived network-isolated pullback of the OCI index digest above recorded these in-container executable hashes:
 
 | Artifact | SHA-256 |

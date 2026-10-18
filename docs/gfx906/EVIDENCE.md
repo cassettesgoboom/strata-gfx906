@@ -18,6 +18,10 @@ These are the archived MI50 figures documented in [PR #11](https://github.com/ca
 
 These values are sanitized historical estimates, not independently reproduced here. Keep the strict SSE estimate and whole-wave estimate distinct. Do not combine them into one rate or imply that either value proves the image's source provenance. Artifact identity and source limitations are documented in [PROVENANCE.md](PROVENANCE.md).
 
+## PR #52 compile-only source build
+
+The [PR #52 build receipt](../../benchmarks/gfx906/receipts/2026-10-18-pr1752-gfx906-hip-build.json) records a gfx906 HIP Release compile from fork base `294fe5248273ec1a9c7331d81d0708ce8e66423c` plus the checked-in upstream #1752 policy patch bundle. The produced binary SHA-256 is `805ffbf38e0e0030f99f7b62b96aa129350d96fe016d08e580abab3fe98806f8`; the build completed 147/147 Ninja steps without GPU devices or model assets. This is compile evidence only, not an inference result, runtime/performance validation, or reproduction of the archived benchmark binary. Do not add it to the throughput table above.
+
 ## Pre-merge source-equivalent serial GPU smoke
 
 The [2026-10-16 machine-readable receipt](../../benchmarks/gfx906/receipts/2026-10-16-current-main-gpu-smoke.json) identifies the tested source-equivalent fork main as pre-merge commit `64185a40962121b9adfc20e0e1a45b634cfeb472` and the native binary SHA-256 as `73a0f98105938850c749a3f0ed1dfe08e1753a97379aa9741c7fb73351c0137c`. It records that binary running on two MI50 cards. The first 4K-context request generated 146 tokens. Its continuation, constructed with the actual first answer, generated 130 tokens and reused 70 prompt tokens according to native request metrics. Both returned HTTP 200 with `stop` finish reasons; MTP accepted 173 of 208 offered proposals across the two requests. Candidate swap and OOM counters remained zero, and the isolated candidate shut down cleanly.
