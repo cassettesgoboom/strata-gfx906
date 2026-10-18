@@ -6,7 +6,7 @@
     "repository": "cassettesgoboom/strata-gfx906",
     "base_commit": "3f076fea5a98f69d2fec1d364b21380eb1a67e95",
     "runtime_change_commit": "7face86d0eb42712a068a19fdb7d661ecfe4755d",
-    "branch_head": "5ad0d81aae34ae646d941d18c048d5100c6a8593",
+    "source_branch_head_at_smoke": "5ad0d81aae34ae646d941d18c048d5100c6a8593",
     "native_sha256": "3e6d46636e5671c5920b374ce55202dadbf2e111e5db3e8ba4fb46b69ae701c8",
     "changed_native_files": [
       {
