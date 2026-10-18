@@ -205,3 +205,23 @@ between the PR #41 merge and that current-main revision. This binary is not the 
 source reproduction nor inference or parity. The separate smoke receipt records short serial inference, but
 does not establish that the changed device-scoping path was exercised, MTP proposal activity, token parity, or
 persistent recurrent-state parity.
+
+**PR #52 upstream gfx906 file-tier policy (2026-10-18):** [PR #52](https://github.com/cassettesgoboom/strata-gfx906/pull/52)
+merged at [`2bbf2a64f4d4507cc39f71fa1392a21620fa7f8e`](https://github.com/cassettesgoboom/strata-gfx906/commit/2bbf2a64f4d4507cc39f71fa1392a21620fa7f8e).
+It selectively ports upstream [commit `1d6fd9f97ab09da231b35cbbd84a2879adb6d77f`](https://github.com/Niko1221/Strata/commit/1d6fd9f97ab09da231b35cbbd84a2879adb6d77f)
+(PR #1752, KevinX8) in the Linux expert file-tier cache decision. On Linux,
+gfx906 builds use the older full-read rule by default; other builds retain the
+hot-read rule. `STRATA_FILE_CACHE_OLD_RULE=1` selects the older rule and
+`STRATA_FILE_CACHE_OLD_RULE=0` selects the hot-read rule. The existing
+`STRATA_UNBUFFERED_LOAD` force setting returns before this selection and retains
+precedence.
+
+The checked-in [build receipt](../../benchmarks/gfx906/receipts/2026-10-18-pr1752-gfx906-hip-build.json)
+records a compile-only gfx906 HIP Release build (147/147 Ninja steps) from base
+`294fe5248273ec1a9c7331d81d0708ce8e66423c` plus a patch bundle, with no GPU
+devices or model assets; its binary SHA-256 is
+`805ffbf38e0e0030f99f7b62b96aa129350d96fe016d08e580abab3fe98806f8`. This is
+not a local MI50 runtime or performance comparison. The policy change does not
+port AB/CD, establish token/state parity, or identify the source of the archived
+benchmark binary. Issue #24's runtime ownership, drain, and recovery gate remains
+open.
