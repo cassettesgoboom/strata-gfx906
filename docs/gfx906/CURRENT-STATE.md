@@ -19,6 +19,17 @@ focused C++20 transaction test passed, and the main CPU suite had 60 tests. Thes
 changes do not integrate AB/CD into the runtime, establish GPU overlap or
 parity, or change the published image.
 
+PR [#47](https://github.com/cassettesgoboom/strata-gfx906/pull/47) merged at
+`3d63da0ab60f3a51208d75a9c08ac4e70174d45d`. It makes the v3 comparator reject
+serial/candidate pairs with different evidence classes and reports
+`capture_authenticated: false` on equality. The 78-test CPU suite, both hosted
+PR checks, and post-merge main workflow `39086600822` passed. This closes a
+comparator-labeling gap only; it adds no native capture producer and proves no
+runtime parity. PR [#48](https://github.com/cassettesgoboom/strata-gfx906/pull/48)
+merged at `a2c308c0be339f7f9fcc5d4a555c4291bc87fdf2`; it documents the pinned
+schema-test dependency required in a fresh environment. Its post-merge hosted
+CPU workflow passed. Neither PR changes the native runtime or published image.
+
 PR [#31](https://github.com/cassettesgoboom/strata-gfx906/pull/31) merged at
 `6cb3c586833966b48e4df77180552b42331e429c`. It replaces the watchdog release
 registry's raw `Verifier*` access with fixed-lifetime controls for publishing
