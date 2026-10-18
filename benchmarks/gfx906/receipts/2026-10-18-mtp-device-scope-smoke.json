@@ -1,0 +1,89 @@
+{
+  "schema": "gfx906-mtp-device-scope-smoke-v1",
+  "date_utc": "2026-10-18",
+  "classification": "short model-backed serial inference smoke; not a performance benchmark or parity test",
+  "source": {
+    "repository": "cassettesgoboom/strata-gfx906",
+    "base_commit": "3f076fea5a98f69d2fec1d364b21380eb1a67e95",
+    "runtime_change_commit": "7face86d0eb42712a068a19fdb7d661ecfe4755d",
+    "branch_head": "5ad0d81aae34ae646d941d18c048d5100c6a8593",
+    "native_sha256": "3e6d46636e5671c5920b374ce55202dadbf2e111e5db3e8ba4fb46b69ae701c8",
+    "changed_native_files": [
+      {
+        "path": "include/strata/core/mtp.hpp",
+        "sha256": "e9d7c23e8c8617d621fd94c466d8463bd80ed063867735f48ab2b0aeb6091ad6"
+      },
+      {
+        "path": "src/core/mtp.cpp",
+        "sha256": "5f97261e06660162b374d80499cf95735d25ac84106196fb11f58ac640156d83"
+      }
+    ],
+    "server_source_sha256": "7af791e669f416a023b62ab4488d23e7693bd420acb7f12d90d792cbdcc4f407"
+  },
+  "distribution": {
+    "base_runtime_image_digest": "sha256:a7527bd8efe2dcdb0a0a7fd6b96761507ce79f9d585ce1649ce5b91158258a29",
+    "native_binary_overmounted": true,
+    "python_server_source_overmounted": true,
+    "new_image_built_or_published": false,
+    "published_image_validated": false
+  },
+  "environment": {
+    "hardware_class": "two AMD Instinct MI50 32 GB cards, gfx906",
+    "layer_split": "24+24",
+    "model_assets": "external Qwen3.8 Flash-Next IQ3_XXS test assets; not distributed",
+    "context_tokens": 4096,
+    "kv": "K8/V4",
+    "kv_resident": 4096,
+    "scheduler": "serial MTP configured; AB/CD disabled",
+    "model_weights_included": false
+  },
+  "requests": [
+    {
+      "kind": "initial_generation",
+      "http_status": 200,
+      "native_prompt_reused_tokens": 76,
+      "native_prompt_total_tokens": 81,
+      "native_generated_tokens": 96,
+      "client_first_content_seconds": 3.234,
+      "finish_reason": "length",
+      "stream_complete": true
+    },
+    {
+      "kind": "actual_assistant_followup_attempt",
+      "assistant_message_matches_seed": true,
+      "native_prompt_reused_tokens": 146,
+      "native_prompt_total_tokens": 151,
+      "native_output_tokens": 96,
+      "visible_assistant_content": false,
+      "finish_reason": "length",
+      "reason": "The request reached its token limit while still thinking and produced no visible assistant content; this attempt is not counted as a completed continuation."
+    },
+    {
+      "kind": "corrected_same_prefix_replay",
+      "assistant_message_matches_seed": true,
+      "reasoning_budget_tokens": 64,
+      "max_tokens": 256,
+      "http_status": 200,
+      "native_reuse_counter_on_this_replay": null,
+      "native_output_tokens": 141,
+      "client_first_content_seconds": 2.727,
+      "client_stream_seconds": 3.492,
+      "finish_reason": "stop",
+      "stream_complete": true
+    }
+  ],
+  "result": {
+    "serial_inference_and_conversation_reuse_smoke": "pass",
+    "native_mtp_accepted_offered_counters": "not captured; MTP draft activity is not claimed",
+    "ab_cd_runtime": "not tested",
+    "native_token_parity": "not tested",
+    "persistent_recurrent_state_parity": "not tested",
+    "candidate_exit": 0
+  },
+  "limitations": [
+    "The smoke used the archived runtime image as a base with the PR-source native binary and Python source bind-mounted; it does not validate a new or pulled distribution image.",
+    "The native prompt reuse count of 146/151 applies to the first follow-up attempt; the corrected same-prefix replay has no direct native reuse counter and is not represented as meeting the 98 percent benchmark gate.",
+    "The run had no MTP accepted/offered counters, so MTP proposal activity or acceptance is not claimed despite the configured serial-MTP path.",
+    "The smoke does not establish sustained throughput, AB/CD behavior, exact native-token parity, recurrent-state parity, or production readiness."
+  ]
+}

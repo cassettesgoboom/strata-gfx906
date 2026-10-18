@@ -24,6 +24,12 @@ The [2026-10-16 machine-readable receipt](../../benchmarks/gfx906/receipts/2026-
 
 The pre-merge source-equivalent binary and server were mounted into the archived runtime image for this smoke. The published image still contains the archived binary. No rebuild or GPU smoke is recorded for post-merge main at the 2026-10-17 checkpoint (audited checkpoint SHA `73e01b3a5f1c577899e3f668e7e913759a1f7455`). These short serial requests do not measure sustained multi-agent throughput, validate AB/CD, or prove exact native-token or recurrent-state parity. They must not be pooled with the historical benchmark table above.
 
+## PR #41 MTP device-scope branch smoke
+
+The [sanitized receipt](../../benchmarks/gfx906/receipts/2026-10-18-mtp-device-scope-smoke.json) identifies the PR #41 source commit and binary hash. A short serial request generated 96 tokens; a follow-up used the exact generated assistant message. The first follow-up attempt generated thinking tokens but no visible answer before reaching its token limit. A replay with the identical message prefix and `reasoning_budget_tokens=64` returned 141 tokens with a normal `stop` finish. Native logs reported reuse of 146/151 prompt tokens on the first follow-up attempt; the corrected replay has no separate native reuse counter, so this is not represented as meeting the 98% cached-benchmark gate.
+
+The smoke used the archived runtime image as a base with the PR-source native binary and Python source mounted over it. It did not build or validate a new published image. Serial MTP was configured, but offered/accepted MTP counters were unavailable; actual MTP draft activity is not claimed. No AB/CD behavior, sustained throughput, exact token parity, or recurrent-state parity was tested.
+
 ## PR #22 one-window verifier refactor build
 
 [PR #22](https://github.com/cassettesgoboom/strata-gfx906/pull/22) merged the mechanical refactor that groups
