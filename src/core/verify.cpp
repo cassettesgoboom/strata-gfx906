@@ -3212,12 +3212,28 @@ bool Verifier::commit_slot_prefixes(const int* keep, std::string& err) {
 
 bool Verifier::sample_rows(int S, std::string& err) {
     bool any = false;
+    int last = -1, u = 0;   // the row's index within its own slot's rows (contiguous: see commit_slot_prefixes)
     for (int t = 0; t < S; ++t) {
-        strata::kernels::SamplerParams sp = slot_sp_[(size_t) window_.slots[t]];
-        if (sp.greedy || sp.temperature <= 0.0f) continue;
+        const int slot = window_.slots[t];
+        strata::kernels::SamplerParams sp = slot_sp_[(size_t) slot];
+        u = (slot == last) ? u + 1 : 0;
+        last = slot;
+        // issue #55: with staged histories the slot's penalised rows sample as the solo window samples its own:
+        // the greedy ones through the sampler's greedy kernel (the window graph's argmax sees no history, and the
+        // solo greedy path DOES penalise) and the sampled ones over the row's own token tail.  Without them - no
+        // engine staging, or a row past the staged ones - the behavior is exactly what it was: penalties off.
+        const bool hist = row_hist_ != nullptr && row_hist_len_ > 0 && sp.penalty_last_n > 0 &&
+                          u < row_hist_rows_ && slot < (int) slot_sp_.size();
+        if (!hist && (sp.greedy || sp.temperature <= 0.0f)) continue;
         sp.counter = (uint64_t) window_.positions[t];   // Philox(seed, position): the solo window's draw for this position
-        sp.penalty_last_n = 0;
-        strata::kernels::sample_tokens(head_logits_ + (size_t) t * (size_t) n_vocab_, 1, (int) n_vocab_, nullptr, 0, sp,
+        const int32_t* hrow = nullptr;
+        int hlen = 0;
+        if (hist) {
+            hrow = row_hist_ + ((size_t) slot * (size_t) row_hist_rows_ + (size_t) u) * (size_t) row_hist_len_;
+            hlen = row_hist_len_;   // the kernel counts the row's last min(penalty_last_n, hlen) entries, as solo
+        } else
+            sp.penalty_last_n = 0;
+        strata::kernels::sample_tokens(head_logits_ + (size_t) t * (size_t) n_vocab_, 1, (int) n_vocab_, hrow, hlen, sp,
                                        m_out_ + t, cs_);
         any = true;
     }

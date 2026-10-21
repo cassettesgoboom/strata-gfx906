@@ -214,7 +214,11 @@ counter-based draw (Philox(seed, position)).
 - `--batch-mtp` uses one proposal per slot. With a layer split it needs each stage on its own GPU, does not combine
   with `--batch-groups` above 1 (pipelined slot groups run no drafts, #1413) and has not been run with helper expert
   caches.
-- Repetition / frequency / presence penalties are not applied in batch windows.
+- Repetition / frequency / presence penalties apply per row in batch windows (#55): each penalised row counts over its
+  own slot's tokens, staged per window as the solo path stages its history, and a greedy row that asks for a penalty
+  samples through the sampler like the solo greedy path (the window graph's argmax sees no history). A request that
+  sends no penalty leaves the window sampling exactly as before. The gfx906 parity witness is
+  `tools/gfx906/run-p1.1-penalty.sh` (three arms: control, sampled, greedy - every slot must read IDENTICAL).
 - A prompt shorter than one chunk is read in one piece (the slots wait for it); a read gives way only at a chunk
   boundary, and not for pictures.
 - Admissions are one at a time: two new long prompts are read one after the other.

@@ -115,7 +115,10 @@ while True:
                 log.write(f"REFUSED {slot}\n"); log.flush()
             continue
         if log:
-            log.write(f"{f[0]} {slot} {len(ids)} {max(len(active), 0)}\n"); log.flush()
+            log.write(f"{f[0]} {slot} {len(ids)} {max(len(active), 0)}\n")
+            if "penalty" in line:   # #55: a request that sends a penalty gets its control line echoed as written
+                log.write("RAW " + line.rstrip() + "\n")   # (other requests' logs stay exactly as the tests read them)
+            log.flush()
         pb = bytes(int(x) & 255 for x in ids)
         mark = b"NFSOLO" if f[0] == "GEN" else b"NFADMIT"
         if mark in pb and mark not in fired:
@@ -483,6 +486,41 @@ class ParallelService(unittest.TestCase):
         go(second)
         a.join(30)
         return res
+
+    def test_penalties_reach_the_batch_slot(self):
+        """#55: the penalties a request sends must reach the engine on the BGEN line too - the server forwards
+        them as it does for GEN (the engine's batch windows applied them only after #55; this pins the server side)."""
+        self.start(2)
+        hold, penal = "hold the slot LONGREPLY", "a penalised request"
+        errors, out = [], {}
+
+        def go(t, extra):
+            body = {"messages": [{"role": "user", "content": t}], "max_tokens": 64, "reasoning_effort": "none"}
+            body.update(extra)
+            try:
+                req = urllib.request.Request(self.base + "/v1/chat/completions", data=json.dumps(body).encode(),
+                                             headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    out[t] = json.loads(r.read().decode())
+            except Exception as e:   # noqa: BLE001 - reported below
+                errors.append(e)
+
+        th1 = threading.Thread(target=go, args=(hold, {}))
+        th1.start()
+        time.sleep(0.05)   # the first decodes long enough for the second to arrive while it runs
+        th2 = threading.Thread(target=go, args=(penal, {"repetition_penalty": 1.3}))
+        th2.start()
+        th1.join(30)
+        th2.join(30)
+        self.assertEqual(errors, [])
+        self.assertEqual(out[penal]["choices"][0]["message"]["content"], "ok, done.")
+        # the penalised request went through a BGEN line, and that line carries its penalty and the default
+        # 64-token window the server documents for penalties without an explicit one
+        lines = [x for x in self.log.read_text().splitlines() if x.startswith("RAW BGEN ")]
+        self.assertTrue(any("penalty_repeat=1.3" in x and "penalty_last_n=64" in x for x in lines), lines)
+        # the request that sent no penalty still got its reply (its control lines carry no keys to echo: the
+        # neutral path is what the other tests in this file already read, byte for byte)
+        self.assertEqual(out[hold]["choices"][0]["message"]["content"], "ok, " + "la " * 15 + "done.")
 
     def test_a_long_prompt_gives_way_to_a_short_one(self):
         """#656: a long solo prompt read gives way at a chunk boundary; the short request is answered first, then the
