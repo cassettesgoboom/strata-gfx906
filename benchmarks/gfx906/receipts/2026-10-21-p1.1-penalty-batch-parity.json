@@ -1,0 +1,53 @@
+{
+  "task": "P1.1 (issue #55): penalties per row in batch windows - solo-vs-batch token parity",
+  "date": "2026-10-21",
+  "branch": "gfx906/xolotl-merge",
+  "engine": "engine/strata built at e940051b (fix included), model Swift-1.5 GSQ IQ3_XXS",
+  "hardware": "4x MI50 (gfx906); batch arm used --gpu 1; 125 GiB RAM, all other engines down",
+  "config": "strata-swift-iq3_xxs.json + --pcie-frac 0 --adapt-every 1000000 --no-prefill-borrow, STRATA_IQ_MT_MIN=1 (exactness recipe)",
+  "arms": [
+    {
+      "name": "control",
+      "keys": "(none - greedy)",
+      "batch": 4, "prompts": 4, "max_new": 64,
+      "result": "4/4 slots IDENTICAL to solo",
+      "log": "logs/p1.1-control-stdout-20261021-201108.log"
+    },
+    {
+      "name": "sampled (unseeded, first run of run-p1.1-penalty.sh)",
+      "keys": "temperature=0.7 top_k=20 repetition_penalty=1.1 penalty_last_n=32",
+      "result": "3/4 slots DIFFER - explained by the arm, not by #55: an unseeded request takes a fresh steady_clock-keyed seed (generate.cpp:11854), so solo and batch are two different runs",
+      "log": "logs/p1.1-sampled-stdout-20261021-201108.log"
+    },
+    {
+      "name": "D: sampled, no penalty, unseeded (discriminator)",
+      "keys": "temperature=0.7 top_k=20",
+      "result": "3/4 DIFFER, one at token 0 - no penalty involved: sampled solo-vs-batch is not comparable without a seed (pre-existing engine behavior, not caused by #55)",
+      "log": "logs/p1.1-D-sampled-nopen.log"
+    },
+    {
+      "name": "E: sampled + penalty, seed=1234 (the parity witness)",
+      "keys": "temperature=0.7 top_k=20 repetition_penalty=1.1 penalty_last_n=32 seed=1234",
+      "result": "4/4 slots IDENTICAL to solo - a seeded sampled request replays token-identical in a batch slot WITH penalties in play",
+      "log": "logs/p1.1-E-sampled-pen-seeded.log"
+    },
+    {
+      "name": "greedy + penalty",
+      "keys": "repetition_penalty=1.1 penalty_last_n=32",
+      "result": "4/4 slots IDENTICAL to solo (greedy draws no random numbers, so this arm is seed-free)",
+      "log": "logs/p1.1-greedy-stdout-20261021-201108.log"
+    },
+    {
+      "name": "H: strong penalty seeded (confirmatory)",
+      "keys": "temperature=0.7 top_k=20 repetition_penalty=1.8 penalty_last_n=64 seed=1234",
+      "result": "pending - at rp=1.8 a batch that ignored the penalty could not track solo over 4x64 tokens",
+      "log": "logs/p1.1-H-strong-pen-seeded.log (to be written)"
+    }
+  ],
+  "cpu_gates": {
+    "build": "build-906 incremental green (21 s), strata linked",
+    "ctest": "54 tests; fail-set {split_lend, mmvq_il, verify_parity, ple_parity} equals the clean parent's A/B under the same GPU contention (stash/rebuild/rerun/pop)",
+    "test_parallel": "python3 -m serve.test_parallel 31/31 (30 existing + test_penalties_reach_the_batch_slot)"
+  },
+  "conclusion": "Batch windows apply each row's penalties (#55): seeded sampled parity 4/4 WITH penalties, greedy-penalty parity 4/4, control 4/4. The unseeded sampled difference is the engine's by-design random seed (steady_clock, generate.cpp:11854), witnessed independent of penalties (arm D). Pre-fix the batch sampler zeroed penalty_last_n (verify.cpp sample_rows), so a batched penalised request sampled the unpenalised distribution; E could not track solo there."
+}

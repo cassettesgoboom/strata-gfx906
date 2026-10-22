@@ -3,9 +3,13 @@
 # Swift IQ3_XXS, gfx906, on the exactness recipe (same arms' shape as P0.2).
 # Three arms, batch 4 / 4 prompts / 64 tokens each:
 #   control   - no sampling keys: must reproduce P0.2's IDENTICAL on every slot.
-#   sampled   - temperature + repetition penalty: the batch sampler now penalises each row from its own
-#               slot's history (staged per window); before #55 the engine zeroed the penalty and this
-#               arm DIFFERED from solo - after the change it must be IDENTICAL.
+#   sampled   - temperature + repetition penalty WITH seed=1234: the batch sampler now penalises each row from
+#               its own slot's history (staged per window); before #55 the engine zeroed the penalty and this
+#               arm DIFFERED from solo - after the change it must be IDENTICAL.  The seed is part of the arm:
+#               an unseeded request draws from a fresh steady_clock-keyed stream (generate.cpp:11854), so solo
+#               and batch are two different runs and DIFFER BY DESIGN (witnessed 2026-10-21: an unseeded
+#               sampled arm differs at token 0 with no penalty involved); a seeded one replays the same Philox
+#               draws and is what tests the penalty path.  Greedy arms need no seed: they draw no random numbers.
 #   greedy    - penalty with no temperature: a greedy row that asks for a penalty samples through the
 #               sampler kernel (the window graph's argmax sees no history; the solo greedy path DOES
 #               penalise), so this arm pins that replacement too.
@@ -44,7 +48,7 @@ run_arm() {
     [ "$code" -ne 0 ] && rc=$code
 }
 run_arm "control" ""
-run_arm "sampled" "temperature=0.7 top_k=20 repetition_penalty=1.1 penalty_last_n=32"
+run_arm "sampled" "temperature=0.7 top_k=20 repetition_penalty=1.1 penalty_last_n=32 seed=1234"
 run_arm "greedy" "repetition_penalty=1.1 penalty_last_n=32"
 echo "=== P1.1 penalty witness done rc=$rc logs: logs/p1.1-*-${TS}.log ==="
 exit $rc
