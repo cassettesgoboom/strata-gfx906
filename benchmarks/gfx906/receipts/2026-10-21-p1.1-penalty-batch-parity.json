@@ -40,14 +40,14 @@
     {
       "name": "H: strong penalty seeded (confirmatory)",
       "keys": "temperature=0.7 top_k=20 repetition_penalty=1.8 penalty_last_n=64 seed=1234",
-      "result": "pending - at rp=1.8 a batch that ignored the penalty could not track solo over 4x64 tokens",
-      "log": "logs/p1.1-H-strong-pen-seeded.log (to be written)"
+      "result": "4/4 slots IDENTICAL to solo - at rp=1.8 over 4x64 tokens a batch ignoring the penalty could not track solo, so the batch sampler demonstrably applies it",
+      "log": "logs/p1.1-H-strong-pen-seeded.log"
     }
   ],
   "cpu_gates": {
     "build": "build-906 incremental green (21 s), strata linked",
-    "ctest": "54 tests; fail-set {split_lend, mmvq_il, verify_parity, ple_parity} equals the clean parent's A/B under the same GPU contention (stash/rebuild/rerun/pop)",
+    "ctest": "54 tests; fail-set {split_lend, mmvq_il, verify_parity, ple_parity} equals the clean parent's A/B under the same GPU contention (stash/rebuild/rerun/pop); re-run 2026-10-21 with FREE VRAM (all engines down): the same 4 fail in 139 s - they are the documented baseline failures on this tree, not contention and not this change",
     "test_parallel": "python3 -m serve.test_parallel 31/31 (30 existing + test_penalties_reach_the_batch_slot)"
   },
-  "conclusion": "Batch windows apply each row's penalties (#55): seeded sampled parity 4/4 WITH penalties, greedy-penalty parity 4/4, control 4/4. The unseeded sampled difference is the engine's by-design random seed (steady_clock, generate.cpp:11854), witnessed independent of penalties (arm D). Pre-fix the batch sampler zeroed penalty_last_n (verify.cpp sample_rows), so a batched penalised request sampled the unpenalised distribution; E could not track solo there."
+  "conclusion": "Batch windows apply each row's penalties (#55): seeded sampled parity 4/4 WITH penalties (E at rp=1.1 and H at rp=1.8), greedy-penalty parity 4/4, control 4/4. The unseeded sampled difference is the engine's by-design random seed (steady_clock, generate.cpp:11854), witnessed independent of penalties (arm D). Pre-fix the batch sampler zeroed penalty_last_n (verify.cpp sample_rows), so a batched penalised request sampled the unpenalised distribution; E could not track solo there."
 }

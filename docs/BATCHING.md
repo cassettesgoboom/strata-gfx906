@@ -221,7 +221,8 @@ counter-based draw (Philox(seed, position)).
   `tools/gfx906/run-p1.1-penalty.sh` (three arms: control, sampled, greedy - every slot must read IDENTICAL).
   Sampled arms carry a seed: an unseeded request draws from a fresh `steady_clock`-keyed stream, so its solo and
   batch runs are two different runs and differ by design - a seeded sampled request with penalties replays
-  token-identical in a batch slot (4/4 slots, Swift IQ3_XXS, gfx906, 2026-10-21).
+  token-identical in a batch slot, at repetition 1.1 and at 1.8 alike (4/4 slots each, Swift IQ3_XXS, gfx906,
+  2026-10-21).
 - A prompt shorter than one chunk is read in one piece (the slots wait for it); a read gives way only at a chunk
   boundary, and not for pictures.
 - Admissions are one at a time: two new long prompts are read one after the other.
