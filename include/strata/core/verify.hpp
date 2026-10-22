@@ -144,6 +144,18 @@ public:
         hist_len_ = history_len;
         if (next_) next_->set_history(history, history_len);
     }
+    /// The BATCH windows' penalty histories (issue #55): `rows_per_slot` rows of `row_len` tokens per slot - the
+    /// fed-back head's row, then its draft's row - the row `u` of slot `s` at `(s * rows_per_slot + u) * row_len`,
+    /// staged with penalty_rows' rule (the tokens the slot's sessions hold, then its window rows; -1 padding).
+    /// Null (never set) keeps the batch sampling exactly as it was: penalties ignored, the graph's argmax picking
+    /// the greedy rows.  The rows are laid out PER SLOT so the pipelined groups' in-flight windows never read
+    /// rows another group staged, and `row_len` stays fixed while any group runs (one Verifier chain serves them).
+    void set_row_histories(const int32_t* rows, int rows_per_slot, int row_len) {
+        row_hist_ = rows;
+        row_hist_rows_ = rows_per_slot;
+        row_hist_len_ = row_len;
+        if (next_) next_->set_row_histories(rows, rows_per_slot, row_len);
+    }
     /// PROBABILISTIC DRAFT ACCEPTANCE (core/spec_prob.hpp, STRATA_SPEC_PROB=1): for the NEXT run() only, judge the
     /// window's first `n_q` drafts against the drafter's distributions `q` (host memory, n_q rows of kSpecQStride
     /// int32: ids, -1 terminated, then probabilities as float bits) with rejection sampling instead of exact match; the
@@ -396,6 +408,9 @@ private:
         return s;
     }();   ///< greedy by default; per-request via set_sampling
     const int32_t* hist_d_ = nullptr;   ///< penalty-history row (set_history); null = no penalties apply
+    const int32_t* row_hist_ = nullptr;  ///< batch rows' penalty histories (set_row_histories); null = today's behavior
+    int row_hist_rows_ = 0;              ///< the staged rows per slot (2: the head's row, then its draft's)
+    int row_hist_len_ = 0;               ///< the staged row's length (fixed while a pipelined group runs)
     const int32_t* spec_q_ = nullptr;   ///< set_spec_q: the drafter's q rows for the next window (host)
     int spec_nq_ = 0;
     int32_t* d_spec_ = nullptr;          ///< device: kVerifyMaxT draft ids, then kVerifyMaxT q rows

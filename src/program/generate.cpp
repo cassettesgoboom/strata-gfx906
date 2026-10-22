@@ -9818,6 +9818,7 @@ int main(int argc, char** argv) {
             std::array<int32_t, strata::kernels::kVerifyMaxT> draft{}; ///< the slot's next MTP proposal
             bool draft_ready = false;
             int64_t p = 0;                 ///< its position
+            int penalty_n = 0;             ///< issue #55: the request's penalty_last_n (0: its rows read no staged history)
             int64_t produced = 0, max_new = 0;
             Clock::time_point t0;
             // the slot's own conversation cache: the tokens its sessions hold (the prompt, then every token a window
@@ -9839,6 +9840,19 @@ int main(int argc, char** argv) {
             bool tainted = false;
         };
         std::vector<BSlot> bs((size_t) std::max(o.batch, 0));
+        // issue #55: the batch windows' penalty histories - two staged rows per slot (the fed-back head's row,
+        // then its draft's row) of kPenaltyWindowCap tokens, re-staged per window at the window builds below.
+        // Laid out PER SLOT with a fixed stride, so a pipelined group's in-flight rows are never re-laid by
+        // another group's staging.  A slot that asks for no penalty reads none: its rows sample as they did.
+        std::vector<int32_t> bhist_stage((size_t) bs.size() * 2u * (size_t) kPenaltyWindowCap, -1);
+        int32_t* d_bhist = nullptr;
+        if (!bhist_stage.empty()) {
+            const strata::core::OnDevice on_bh(hist_dev);
+            if (cudaMalloc(&d_bhist, bhist_stage.size() * sizeof(int32_t)) != cudaSuccess) {
+                std::fprintf(stderr, "strata serve: the batch penalty-history allocation failed\n");
+                return 1;
+            }
+        }
         // timing of the batch windows since the slots were last all idle (one stderr line then)
         double bt_run = 0, bt_commit = 0, bt_emit = 0;
         double bt_wait0 = 0, bt_pool0 = 0;
@@ -10030,7 +10044,31 @@ int main(int argc, char** argv) {
                 bt_cpu_ent0 = drive.d.multi_entries; bt_off_ent0 = drive.d.offload_entries;
                 bt_a_rounds0 = a_rounds; bt_a_swapped0 = a_swapped;
             }
+            // issue #55: this window's penalty rows, staged per slot as the solo window stages its own
+            // (penalty_rows: the tokens the slot's sessions hold, the fed-back head, then the drafts before
+            // that row), so a penalised row - sampled, or greedy whose pick the sampler now replaces because
+            // it asks for a penalty (the window graph's argmax sees no history, and the solo greedy path
+            // DOES penalise) - counts over exactly the tokens plain decode would have.
             const Clock::time_point w0 = Clock::now();
+            if (d_bhist != nullptr) {
+                ver.set_row_histories(d_bhist, 2, kPenaltyWindowCap);
+                bool any_pen = false;
+                for (int t = 0; t < S; ++t)
+                    if (bs[(size_t) rows[t]].penalty_n > 0) { any_pen = true; break; }
+                if (any_pen) {
+                    const int hn = kPenaltyWindowCap;
+                    for (int t = 0; t < S;) {
+                        const int first = t;
+                        while (t < S && rows[t] == rows[first]) ++t;
+                        BSlot& sl = bs[(size_t) rows[first]];
+                        if (sl.penalty_n <= 0) continue;
+                        strata::kernels::penalty_rows(sl.ids.data(), (int64_t) sl.ids.size(), tok + first, t - first, hn,
+                                                      bhist_stage.data() + (size_t) rows[first] * 2u * (size_t) hn);
+                    }
+                    const strata::core::OnDevice on_bh(hist_dev);
+                    cudaMemcpy(d_bhist, bhist_stage.data(), bhist_stage.size() * sizeof(int32_t), cudaMemcpyHostToDevice);
+                }
+            }
             if (!ver.run_slot_rows(rows, S, tok, pos, win_pool_fn, win_pool_user, outb, err) || drive.d.failed) {
                 std::printf("ERR %s\n", drive.d.failed && drive.d.fail ? drive.d.fail : err.c_str());
                 return false;
@@ -10309,6 +10347,25 @@ int main(int argc, char** argv) {
                         G.tok[t] = sl.active ? sl.x : 0;
                         G.pos[t] = sl.active ? sl.p : 0;
                         if (!sl.active) sl.cached = false;   // its pad row writes its state
+                    }
+                    // issue #55: this group's penalty rows, staged per slot (see the serial windows above).
+                    // Inactive slots stage none: their -1 rows penalise nothing, as the pad rows did before.
+                    if (d_bhist != nullptr) {
+                        ver.set_row_histories(d_bhist, 2, kPenaltyWindowCap);
+                        bool gpen = false;
+                        for (int t = 0; t < G.S; ++t)
+                            if (bs[(size_t) (pick * GS + t)].active && bs[(size_t) (pick * GS + t)].penalty_n > 0) { gpen = true; break; }
+                        if (gpen) {
+                            const int hn = kPenaltyWindowCap;
+                            for (int t = 0; t < G.S; ++t) {
+                                BSlot& sl = bs[(size_t) (pick * GS + t)];
+                                if (!sl.active || sl.penalty_n <= 0) continue;
+                                strata::kernels::penalty_rows(sl.ids.data(), (int64_t) sl.ids.size(), G.tok + t, 1, hn,
+                                                              bhist_stage.data() + (size_t) (pick * GS + t) * 2u * (size_t) hn);
+                            }
+                            const strata::core::OnDevice on_bh(hist_dev);
+                            cudaMemcpy(d_bhist, bhist_stage.data(), bhist_stage.size() * sizeof(int32_t), cudaMemcpyHostToDevice);
+                        }
                     }
                     G.inflight = true;
                     G.stage = 0;
@@ -13032,6 +13089,7 @@ int main(int argc, char** argv) {
                     sl.p = p;
                     sl.produced = 1;
                     sl.max_new = admit_max_new;
+                    sl.penalty_n = std::max(req_sp.penalty_last_n, 0);   // issue #55: its rows read the staged histories
                     sl.trace_id = req_trace_id.value();
                     sl.t0 = Clock::now();
                     sl.ids = live;
