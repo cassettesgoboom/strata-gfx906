@@ -4,6 +4,9 @@ This branch starts from upstream Strata v0.2.10. It is a new integration line
 for MI50/gfx906, not a rebuild of the archived Winglab image. Read
 [CURRENT-STATE.md](CURRENT-STATE.md) before editing or benchmarking and
 [BASELINE.md](BASELINE.md) before comparing rates.
+For a public-source gfx906 build and an unpublished local image candidate, see
+[BUILD-AND-IMAGE.md](BUILD-AND-IMAGE.md).
+Use [WORKFLOW.md](WORKFLOW.md) for branches, upstream sync, and pull requests.
 
 ## Git layout
 
@@ -21,9 +24,24 @@ for MI50/gfx906, not a rebuild of the archived Winglab image. Read
 ```sh
 git status --short --branch
 git remote -v
+git remote get-url upstream >/dev/null 2>&1 || git remote add upstream https://github.com/Niko1221/Strata.git
+git fetch upstream main --tags
 git rev-parse HEAD origin/main upstream/main 'v0.2.10^{commit}'
 rg -n 'STRATA_HIP_GFX906|CMAKE_HIP_ARCHITECTURES' CMakeLists.txt docs/AMD_HIP.md
 ```
+
+These clone-only CPU checks need no GPU or model files:
+
+```sh
+python strata.py --help
+python tools/test_setup_choices.py
+python tools/test_setup_build_archs.py
+```
+
+Previously observed results were 59 passing checks for `test_setup_choices.py`
+and 4 for `test_setup_build_archs.py`. Re-run them for the checkout being
+reviewed; they exercise CLI/setup logic only and do not establish HIP
+compilation, MI50 runtime behavior, correctness, or performance.
 
 Use [docs/AMD_HIP.md](../AMD_HIP.md) for the current build interface. Record
 the model identity, native binary SHA256, source commit, toolchain, flags,

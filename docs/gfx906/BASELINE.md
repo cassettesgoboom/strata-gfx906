@@ -22,8 +22,9 @@ cached continuation with only 65 output tokens per lane, so sustained decode
 at that depth is unmeasured. AB/CD exact token and recurrent-state parity is
 unqualified.
 
-Public source: the existing fork's [README](https://github.com/cassettesgoboom/strata-gfx906/blob/main/README.md),
-[EVIDENCE](https://github.com/cassettesgoboom/strata-gfx906/blob/main/docs/gfx906/EVIDENCE.md), and
-[PROVENANCE](https://github.com/cassettesgoboom/strata-gfx906/blob/main/docs/gfx906/PROVENANCE.md).
+Public source at fork commit `e063ec6cf2d9df86626b5746839f086cffbde78e`:
+[README](https://github.com/cassettesgoboom/strata-gfx906/blob/e063ec6cf2d9df86626b5746839f086cffbde78e/README.md),
+[EVIDENCE](https://github.com/cassettesgoboom/strata-gfx906/blob/e063ec6cf2d9df86626b5746839f086cffbde78e/docs/gfx906/EVIDENCE.md), and
+[PROVENANCE](https://github.com/cassettesgoboom/strata-gfx906/blob/e063ec6cf2d9df86626b5746839f086cffbde78e/docs/gfx906/PROVENANCE.md).
 The archived OCI index digest is
 `sha256:a7527bd8efe2dcdb0a0a7fd6b96761507ce79f9d585ce1649ce5b91158258a29`.
