@@ -18,6 +18,7 @@
 #   --no-cache               docker build --no-cache
 #   --ctx-only               assemble the context and stop
 # Environment: STRATA_DOCKER_BUILD_OPTS adds options to `docker build` (for example --network host).
+# STRATA_SOURCE_URL sets the OCI source/url labels (default: the upstream repository).
 # Nothing is pushed anywhere; the image stays in the local Docker.
 set -eu
 
@@ -97,6 +98,7 @@ tr -d '\r' < "$here/strata-wrapper.sh" > "$ctx/docker/strata-wrapper.sh"
 tr -d '\r' < "$here/healthcheck.sh" > "$ctx/docker/healthcheck.sh"
 
 engine_label=$(for e in $engines; do basename "$e"; done | tr '\n' ' ' | sed 's/ $//')
+source_url=${STRATA_SOURCE_URL:-https://github.com/Niko1221/Strata}
 [ -n "$tag" ] || tag="strata:$version-$flavor"
 echo "context: $ctx"
 echo "flavor $flavor, base $base, engine(s): $engine_label, tag $tag"
@@ -105,7 +107,7 @@ echo "flavor $flavor, base $base, engine(s): $engine_label, tag $tag"
 # shellcheck disable=SC2086
 docker build $nocache ${STRATA_DOCKER_BUILD_OPTS:-} \
   --build-arg "BASE_IMAGE=$base" --build-arg "FLAVOR=$flavor" \
-  --build-arg "STRATA_COMMIT=$commit" --build-arg "STRATA_VERSION=$version" --build-arg "ENGINE_LABEL=$engine_label" \
+  --build-arg "STRATA_COMMIT=$commit" --build-arg "STRATA_VERSION=$version" --build-arg "STRATA_SOURCE_URL=$source_url" --build-arg "ENGINE_LABEL=$engine_label" \
   -t "$tag" "$ctx"
 docker image inspect "$tag" --format 'built {{.RepoTags}} {{.Size}} bytes'
 echo "Not pushed anywhere. Size on disk: $(docker image inspect "$tag" --format '{{.Size}}') bytes."

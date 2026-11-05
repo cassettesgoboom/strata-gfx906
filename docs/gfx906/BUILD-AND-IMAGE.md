@@ -116,7 +116,7 @@ image. Keep the exact checkout used for the native binary as `--repo`:
 ROCM_BASE='mixa3607/rocm-gfx906@sha256:<resolved-64-hex-digest>'
 SOURCE_SHORT="$(git rev-parse --short=12 HEAD)"
 
-docker/build.sh \
+STRATA_SOURCE_URL='https://github.com/cassettesgoboom/strata-gfx906' docker/build.sh \
   --repo . \
   --flavor hip \
   --base "$ROCM_BASE" \
@@ -129,6 +129,9 @@ Keep the image local. Record the selected base digest, source commit, native
 binary hash, package manifest hash, image tag, and local image ID. Until a
 dual-MI50 GPU smoke passes and an authorized image is pulled back by its OCI
 digest and checked, this is only a local candidate, not a validated release.
+`STRATA_SOURCE_URL` changes the OCI source/url labels for this fork; the build
+records the checked-out source revision separately from the native engine
+component's own build ID.
 Do not infer runtime correctness or performance from a successful image build.
 
 ## Keep model files external

@@ -66,6 +66,8 @@ RUN set -e; n=0; for d in /engine/*/; do \
 FROM ${BASE_IMAGE}
 ARG FLAVOR=cuda
 ARG STRATA_VERSION=dev
+ARG STRATA_COMMIT=
+ARG STRATA_SOURCE_URL=https://github.com/Niko1221/Strata
 ARG ENGINE_LABEL=
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -114,11 +116,12 @@ VOLUME ["/data"]
 EXPOSE 8080
 
 LABEL org.opencontainers.image.title="Strata" \
-      org.opencontainers.image.source="https://github.com/Niko1221/Strata" \
-      org.opencontainers.image.url="https://github.com/Niko1221/Strata" \
+      org.opencontainers.image.source="${STRATA_SOURCE_URL}" \
+      org.opencontainers.image.url="${STRATA_SOURCE_URL}" \
       org.opencontainers.image.documentation="https://github.com/Niko1221/Strata/blob/main/docs/DOCKER.md" \
       org.opencontainers.image.description="Strata local LLM server (Terminal + engine package), flavor ${FLAVOR}" \
       org.opencontainers.image.version="${STRATA_VERSION}" \
+      org.opencontainers.image.revision="${STRATA_COMMIT}" \
       org.opencontainers.image.licenses="see LICENSE" \
       com.strata.flavor="${FLAVOR}" \
       com.strata.engine="${ENGINE_LABEL}"
