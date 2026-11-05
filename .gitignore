@@ -95,3 +95,6 @@ node_modules/
 /build-spark/
 /build-vision-spark/
 /.venv-build/
+
+# Local operator source snapshots and artifacts are never public source.
+/private/

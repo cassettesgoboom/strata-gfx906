@@ -1,5 +1,10 @@
 # AGENTS.md
 
+For this fork's gfx906 integration work, start at
+[docs/gfx906/START-HERE.md](docs/gfx906/START-HERE.md). It records the exact
+upstream and fork refs, what has been measured, and the next safe test. Keep
+the historical release evidence separate from results produced by this source.
+
 Version 0.2.10, engine 0.1.56. The public model families are DeepSeekV4.1-Flash-1017,
 Qwen3.8-Flash-Next and Qwen3.6-35B-A3B. DeepSeek V4.1-Flash runs in the app and in the Terminal
 (`strata launch --family deepseek41 --model ist-das-2.00bpw`; sets in
