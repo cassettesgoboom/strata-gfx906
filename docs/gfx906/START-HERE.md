@@ -10,8 +10,9 @@ Use [WORKFLOW.md](WORKFLOW.md) for branches, upstream sync, and pull requests.
 
 ## Git layout
 
-- `origin` is the existing `cassettesgoboom/strata-gfx906` fork. Its `main` and
-  historical branches remain available for source and evidence review.
+- `origin` is the existing `cassettesgoboom/strata-gfx906` fork. This
+  integration branch is its default development line. Historical `main` and
+  other branches remain available for source and evidence review.
 - `upstream` is `Niko1221/Strata`. This integration branch begins at the
   upstream v0.2.10 commit recorded in CURRENT-STATE.
 - Make each selected source port a focused commit on this integration line.

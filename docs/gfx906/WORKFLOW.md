@@ -26,14 +26,12 @@ git branch -avv
 git rev-parse 'v0.2.10^{commit}' upstream/main origin/main
 ```
 
-Review `CURRENT-STATE.md` alongside these live refs. Confirm that the local
-`integration/upstream-v0.2.10-gfx906` branch exists and is based directly on
-the recorded upstream v0.2.10 commit before using it. Do not infer from its
-local name that it exists on `origin`, is already pushed, or is the repository
-default branch. Check the available remote branches and repository settings
-when deciding where a pull request can target. If the integration branch is
-not available locally, do not substitute `origin/main`; recover the reviewed
-line from its recorded public source history before creating topic work.
+As of 2026-11-05, `integration/upstream-v0.2.10-gfx906` is published and is
+the fork's default branch. A fresh clone of the repository lands on this line.
+Confirm those live refs and that its upstream merge base is the recorded
+v0.2.10 commit before using it. If the branch is unavailable, do not
+substitute historical `origin/main`; recover the reviewed line from its
+recorded public source history before creating topic work.
 
 ## Make a focused change
 
@@ -70,12 +68,10 @@ activity, parity, and performance as separate claims; record source and binary
 identities and the actual test scope.
 
 Open a small pull request into the verified integration development line, not
-the historical fork `main`. Before opening it, verify that the intended target
-branch is available on the remote and confirm the repository's current default
-branch instead of assuming either. Describe the change, source base, CPU
+the historical fork `main`. Confirm the repository's current default and target
+branch before opening it. Describe the change, source base, CPU
 checks, any gated MI50 evidence, and the limits of what was tested. Preserve
 historical branches and do not force-push them or the integration line.
 
-This document does not assert that the integration branch is published, that
-it is the repository default, or that a remote PR target is currently
-available. Verify those facts from the public repository when needed.
+This branch/default status is a dated snapshot. Verify it from the public
+repository when continuing work later.

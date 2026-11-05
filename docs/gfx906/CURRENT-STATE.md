@@ -6,6 +6,7 @@ Checked 2026-11-05. Update this page when a test or source decision changes.
 | --- | --- |
 | Upstream source base | `Niko1221/Strata` v0.2.10, `ffa80d73133ea5c548aefe57889a16e8085a938f` |
 | Existing fork main at checkout | `cassettesgoboom/strata-gfx906` `e063ec6cf2d9df86626b5746839f086cffbde78e` |
+| Fork default branch | `integration/upstream-v0.2.10-gfx906` since 2026-11-05; historical `main` remains available and unchanged |
 | New integration branch | `integration/upstream-v0.2.10-gfx906`, based on upstream `ffa80d73`; smoke/native code commit `5dddd2cd85008b0c796a94dd2108fbb1ea6102a7` includes one HIP DFlash2 guard fix. Later docs-only commits may follow. |
 | Archived experimental binary | SHA256 `ae93901c79771ace15db52942523c25fc46dd6f0d6a3b43698b28e6071c472cb`; current source has not reproduced it |
 | Smoke/native binary | SHA256 `0a68304e239e148759f5cd6ad1b66950c53c49356d10225ad5df8ca6b2b68a84`; distinct from the archived benchmarked binary |
